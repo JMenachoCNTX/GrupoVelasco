@@ -22,6 +22,14 @@
     -webkit-text-size-adjust:100%;
   }
   h1,h2,h3{margin:0}
+  .home{display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    padding:44px 22px; min-height:calc(100vh - 160px); background:#fff; border-radius:16px;
+    font-family:"Century Gothic","Apple Gothic","Questrial","Futura","Twentieth Century",sans-serif}
+  .home img{width:min(340px,82vw); height:auto; margin-bottom:20px}
+  .home .stitle{font-size:22px; font-weight:800; color:var(--ink); letter-spacing:.4px}
+  .home .sver{font-size:13px; color:var(--muted); font-weight:600; margin-top:5px}
+  .home .hello{margin-top:20px; font-size:15px; color:var(--ink2)}
+  .home .hbtn{margin-top:24px}
   button{font-family:inherit; cursor:pointer}
   input,select,button{font-size:15px}
   .mono{font-variant-numeric:tabular-nums; font-feature-settings:"tnum"}
@@ -298,8 +306,19 @@
   </header>
 
   <main>
+    <!-- INICIO -->
+    <section id="scrHome" class="scr on">
+      <div class="home">
+        <img id="homeLogo" alt="CONTAX">
+        <div class="stitle">Sistema de Administración</div>
+        <div class="sver">Versión <span id="homeVer">—</span></div>
+        <div class="hello" id="homeHello"></div>
+        <div class="hbtn"><button class="mini acc" onclick="showTab('Week')">Ir a registrar la semana →</button></div>
+      </div>
+    </section>
+
     <!-- SEMANA -->
-    <section id="scrWeek" class="scr on">
+    <section id="scrWeek" class="scr">
       <div id="pendAlert"></div>
       <div class="strip" id="weekStrip"></div>
       <div class="exbar">
@@ -452,7 +471,8 @@
   </main>
 
   <nav class="tabs" id="tabs">
-    <button data-scr="Week" class="on" onclick="showTab('Week')"><span class="ic">🗓️</span>Semana</button>
+    <button data-scr="Home" class="on" onclick="showTab('Home')"><span class="ic">🏠</span>Inicio</button>
+    <button data-scr="Week" onclick="showTab('Week')"><span class="ic">🗓️</span>Semana</button>
     <button data-scr="Cal" onclick="showTab('Cal')"><span class="ic">📆</span>Calendario</button>
     <button data-scr="Month" onclick="showTab('Month')"><span class="ic">📊</span>Resumen</button>
     <button data-scr="Rep" onclick="showTab('Rep')"><span class="ic">📈</span>Tablero</button>
@@ -481,7 +501,7 @@ var MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto',
 var BRANCH_COLORS = { cine:'#0e7a5f', memphis:'#2f3f8f', sushiflash:'#e8481f' };
 var LS_KEY = 'controlHoras_v1';
 var LS_CLOUD = 'controlHoras_cloud_v1';
-var APP_VERSION = 'v18';
+var APP_VERSION = 'v21';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -678,6 +698,7 @@ function startApp(){
 
   maybeAutoConnect();
   renderAll();
+  showTab('Home');
   maybeShowReminder();
 }
 
@@ -1904,7 +1925,7 @@ function addUser(){
 
 /* ================= NAV ================= */
 function showTab(scr){
-  ['Week','Cal','Month','Rep','Sched','Staff','Set'].forEach(function(s){
+  ['Home','Week','Cal','Month','Rep','Sched','Staff','Set'].forEach(function(s){
     document.getElementById('scr'+s).classList.toggle('on', s===scr);
   });
   document.querySelectorAll('#tabs button').forEach(function(btn){
@@ -1912,12 +1933,19 @@ function showTab(scr){
   });
   // ocultar controles de semana fuera de la pestaña Semana/Horarios
   document.getElementById('weekNav').style.visibility = (scr==='Week'||scr==='Sched') ? 'visible' : 'hidden';
+  if(scr==='Home') renderHome();
   if(scr==='Cal') renderCal();
   if(scr==='Month') renderMonth();
   if(scr==='Rep') renderReports();
   if(scr==='Sched') renderSchedule();
   if(scr==='Staff') renderStaff();
   if(scr==='Set') renderSettings();
+}
+function renderHome(){
+  var lg=document.getElementById('homeLogo'); if(lg && !lg.src) lg.src=CONTAX_LOGO;
+  var v=document.getElementById('homeVer'); if(v) v.textContent=APP_VERSION;
+  var hi=document.getElementById('homeHello');
+  if(hi && session){ hi.textContent='Bienvenido, '+(session.name || session.email.split('@')[0])+'.'; }
 }
 function onBranch(){ curBranch=document.getElementById('branchSel').value; openEmp={}; openSched={}; renderAll(); }
 function shiftWeek(n){ curMonday=addDays(curMonday,7*n); openEmp={}; openSched={}; renderWeekLabel(); renderWeek(); renderSchedule(); }
