@@ -501,7 +501,7 @@ var MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto',
 var BRANCH_COLORS = { cine:'#0e7a5f', memphis:'#2f3f8f', sushiflash:'#e8481f' };
 var LS_KEY = 'controlHoras_v1';
 var LS_CLOUD = 'controlHoras_cloud_v1';
-var APP_VERSION = 'v21';
+var APP_VERSION = 'v22';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -660,7 +660,16 @@ function doLogin(){
   var pin=document.getElementById('liPin').value.trim();
   var u=findUser(email);
   var err=document.getElementById('liErr');
-  if(!u || String(u.pin)!==pin){ err.textContent='Correo o PIN incorrecto.'; return; }
+  if(!u || String(u.pin)!==pin){
+    var savedCfg=null; try{ savedCfg=JSON.parse(localStorage.getItem(LS_CLOUD)||'null'); }catch(e){}
+    if(!u && savedCfg && savedCfg.cfg && !cloud.connected){
+      err.textContent='Conectando a la nube… espera unos segundos e intenta de nuevo.';
+      maybeAutoConnect();
+    } else {
+      err.textContent='Correo o PIN incorrecto.';
+    }
+    return;
+  }
   err.textContent='';
   session={ email:u.email, level:u.level||(u.role==='admin'?'admin':'editor'), branch:u.branch||'*', name:u.name||'', cargo:u.cargo||'' };
   try{ sessionStorage.setItem('ch_sess', JSON.stringify(session)); }catch(e){}
@@ -2004,7 +2013,7 @@ async function connectCloud(){
       DB=JSON.parse(snap.data().payload); migrateUsers(); cloud.lastTs=snap.data()._ts||0; saveLocal(false);
     } else {
       cloud.lastTs=Date.now();
-      await cloud.ref.set({payload:JSON.stringify(DB), _ts:cloud.lastTs, _by:session.email});
+      await cloud.ref.set({payload:JSON.stringify(DB), _ts:cloud.lastTs, _by:(session?session.email:'auto')});
     }
     if(cloud.unsub) cloud.unsub();
     cloud.unsub=cloud.ref.onSnapshot(function(s){
@@ -2012,11 +2021,11 @@ async function connectCloud(){
       if(data._ts===cloud.lastTs) return;
       cloud.lastTs=data._ts||Date.now();
       try{ DB=JSON.parse(data.payload); migrateUsers(); }catch(e){ return; }
-      saveLocal(false); renderAll();
+      saveLocal(false); if(session) renderAll();
     });
     cloud.connected=true;
     localStorage.setItem(LS_CLOUD, JSON.stringify({cfg:cfgText, space:space}));
-    renderAll();
+    if(session) renderAll();
     toast('Conectado a la nube');
   }catch(e){ cloud.connected=false; toast('No se pudo conectar: '+e.message); renderSettings(); }
 }
@@ -2036,6 +2045,7 @@ function disconnectCloud(){
 }
 async function maybeAutoConnect(){
   try{
+    if(cloud.connected){ if(session) renderAll(); return; }
     var saved=JSON.parse(localStorage.getItem(LS_CLOUD)||'null');
     if(saved && saved.cfg){
       document.getElementById('fbConfig').value=saved.cfg;
@@ -2051,6 +2061,8 @@ async function maybeAutoConnect(){
   applyBranding();
   // restaurar sesión de la pestaña
   try{ var s=JSON.parse(sessionStorage.getItem('ch_sess')||'null'); if(s){ var u=findUser(s.email); if(u){ session={ email:u.email, level:u.level||(u.role==='admin'?'admin':'editor'), branch:u.branch||'*', name:u.name||'', cargo:u.cargo||'' }; startApp(); return; } } }catch(e){}
+  // conectar a la nube ANTES del login para reconocer a los usuarios de la nube
+  maybeAutoConnect();
   document.getElementById('liPin').addEventListener('keydown',function(e){ if(e.key==='Enter') doLogin(); });
 })();
 </script>
