@@ -505,7 +505,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v23';
+var APP_VERSION = 'v24';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -1877,8 +1877,8 @@ function renderSettings(){
   }
 
   // barra de secciones
-  var secs=[['tarifas','Tarifas'],['nube','Nube'],['respaldo','Respaldo']];
-  if(isAdmin()){ secs.push(['controles','Controles']); secs.push(['accesos','Accesos']); }
+  var secs=[['tarifas','Tarifas'],['respaldo','Respaldo']];
+  if(isAdmin()){ secs.splice(1,0,['nube','Nube']); secs.push(['controles','Controles']); secs.push(['accesos','Accesos']); }
   document.getElementById('setPills').innerHTML = secs.map(function(s){ return '<button data-ss="'+s[0]+'" onclick="showSetSection(\''+s[0]+'\')">'+s[1]+'</button>'; }).join('');
   if(!currentSetSec || !secs.some(function(s){return s[0]===currentSetSec;})) currentSetSec='tarifas';
   showSetSection(currentSetSec);
