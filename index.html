@@ -501,7 +501,11 @@ var MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto',
 var BRANCH_COLORS = { cine:'#0e7a5f', memphis:'#2f3f8f', sushiflash:'#e8481f' };
 var LS_KEY = 'controlHoras_v1';
 var LS_CLOUD = 'controlHoras_cloud_v1';
-var APP_VERSION = 'v22';
+var BUILTIN_CLOUD = {
+  space: 'principal',
+  cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
+};
+var APP_VERSION = 'v23';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -661,8 +665,7 @@ function doLogin(){
   var u=findUser(email);
   var err=document.getElementById('liErr');
   if(!u || String(u.pin)!==pin){
-    var savedCfg=null; try{ savedCfg=JSON.parse(localStorage.getItem(LS_CLOUD)||'null'); }catch(e){}
-    if(!u && savedCfg && savedCfg.cfg && !cloud.connected){
+    if(!u && !cloud.connected){
       err.textContent='Conectando a la nube… espera unos segundos e intenta de nuevo.';
       maybeAutoConnect();
     } else {
@@ -2047,6 +2050,7 @@ async function maybeAutoConnect(){
   try{
     if(cloud.connected){ if(session) renderAll(); return; }
     var saved=JSON.parse(localStorage.getItem(LS_CLOUD)||'null');
+    if(!saved || !saved.cfg){ saved=BUILTIN_CLOUD; }   // config incluida: cada equipo se conecta solo
     if(saved && saved.cfg){
       document.getElementById('fbConfig').value=saved.cfg;
       document.getElementById('spaceId').value=saved.space||'principal';
