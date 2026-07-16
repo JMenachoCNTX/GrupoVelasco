@@ -505,7 +505,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v24';
+var APP_VERSION = 'v25';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -1091,6 +1091,8 @@ function computeMonth(yy,mm,branches){
   return {wks:wks,perBranch:perBranch,GG:GG,GP:GP,GS:GS};
 }
 
+var monthWeekSel=null;
+function setMonthWeek(wk){ monthWeekSel=wk; renderMonth(); }
 function renderMonth(){
   var mp=document.getElementById('monthPick').value;
   if(!mp){ mp=isoLocal(curMonday).slice(0,7); document.getElementById('monthPick').value=mp; }
@@ -1108,6 +1110,24 @@ function renderMonth(){
     out+='<tr class="tot"><td>Total</td><td class="mono">'+fmt(M.GG)+'</td><td class="mono pos">'+fmt(M.GP)+'</td><td class="mono '+(M.GS>0.009?'neg':'')+'">'+fmt(M.GS)+'</td></tr>';
     out+='</tbody></table></div></div>';
   }
+  // ---- Total general POR SEMANA ----
+  if(M.wks.length){
+    if(!monthWeekSel || M.wks.indexOf(monthWeekSel)<0) monthWeekSel=M.wks[M.wks.length-1];
+    var sel=monthWeekSel, wG=0, wP=0, wS=0;
+    branches.forEach(function(bid){ var w=M.perBranch[bid].perWeek[sel]; if(w){ wG+=w.g; wP+=w.p; wS+=w.s; } });
+    var selD=parseISO(sel), selSun=addDays(selD,6);
+    out+='<div class="panel"><h3>📅 Total general por semana — '+MONTHS[mm]+' '+yy+'</h3>';
+    out+='<div class="setpills">'+M.wks.map(function(wk){ var d=parseISO(wk), sun=addDays(d,6);
+      return '<button class="'+(wk===sel?'on':'')+'" onclick="setMonthWeek(\''+wk+'\')">'+d.getDate()+'/'+(d.getMonth()+1)+' – '+sun.getDate()+'/'+(sun.getMonth()+1)+'</button>'; }).join('')+'</div>';
+    out+='<div class="note" style="margin:2px 0 10px">Semana del <b>'+selD.getDate()+'/'+(selD.getMonth()+1)+'</b> al <b>'+selSun.getDate()+'/'+(selSun.getMonth()+1)+'</b> (lunes a domingo).</div>';
+    out+='<div class="strip" style="margin-bottom:12px">'+statHTML('Ganado',bs(wG),'g')+statHTML('Pagado',bs(wP),'p')+statHTML('Pendiente',bs(wS),'s')+'</div>';
+    out+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Sucursal</th><th>Ganado</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody>';
+    branches.forEach(function(bid){ var w=M.perBranch[bid].perWeek[sel]||{g:0,p:0,s:0};
+      out+='<tr><td>'+branchName(bid)+'</td><td class="mono">'+fmt(w.g)+'</td><td class="mono pos">'+fmt(w.p)+'</td><td class="mono '+(w.s>0.009?'neg':'')+'">'+fmt(w.s)+'</td></tr>'; });
+    out+='<tr class="tot"><td>Total</td><td class="mono">'+fmt(wG)+'</td><td class="mono pos">'+fmt(wP)+'</td><td class="mono '+(wS>0.009?'neg':'')+'">'+fmt(wS)+'</td></tr>';
+    out+='</tbody></table></div></div>';
+  }
+
   branches.forEach(function(bid){
     var b=M.perBranch[bid];
     var rows=Object.keys(b.perEmp).filter(function(id){return b.perEmp[id].any || DB.employees[id].active;}).sort(function(a,c){return (DB.employees[a].order||0)-(DB.employees[c].order||0);});
