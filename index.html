@@ -357,8 +357,8 @@
           <input id="monthPick" class="fld" type="month" onchange="renderMonth()">
         </div>
         <div class="exbar" style="margin-top:10px">
-          <button class="mini" onclick="exportMonthExcel()">⬇ Excel del mes</button>
-          <button class="mini" onclick="exportMonthPDF()">⬇ PDF del mes</button>
+          <button class="mini" onclick="exportResumenExcel()">⬇ Excel de lo que veo</button>
+          <button class="mini" onclick="exportResumenPDF()">⬇ PDF de lo que veo</button>
         </div>
         <div class="note" style="margin-top:8px">Suma las semanas cuyo lunes cae dentro del mes elegido.</div>
       </div>
@@ -373,7 +373,7 @@
           <b id="repLabel">—</b>
           <button onclick="repShift(1)">›</button>
         </div>
-        <div class="note">Indicadores y gráficos del mes, según la sucursal elegida arriba (o todas).</div>
+        <div class="note">Indicadores y gráficos del mes o de una semana, según la sucursal elegida arriba (o todas). Las flechas ‹ › cambian el mes.</div>
       </div>
       <div id="repBody"></div>
     </section>
@@ -505,7 +505,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v26';
+var APP_VERSION = 'v27';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -1092,6 +1092,9 @@ function computeMonth(yy,mm,branches){
 }
 
 var monthView='mes', monthWeekSel=null;
+function curMonthYM(){ var mp=document.getElementById('monthPick').value||isoLocal(curMonday).slice(0,7); var p=mp.split('-'); return {y:+p[0], m:+p[1]-1}; }
+function exportResumenPDF(){ if(monthView==='semana' && monthWeekSel) exportWeekPDFFor(monthWeekSel); else { var t=curMonthYM(); exportMonthPDFFor(t.y,t.m); } }
+function exportResumenExcel(){ if(monthView==='semana' && monthWeekSel) exportWeekExcelFor(monthWeekSel); else { var t=curMonthYM(); exportMonthExcelFor(t.y,t.m); } }
 function setMonthView(v){ monthView=v; renderMonth(); }
 function setMonthWeek(wk){ monthWeekSel=wk; renderMonth(); }
 function wkLabel(wk){ var d=parseISO(wk), s=addDays(d,6); return d.getDate()+'/'+(d.getMonth()+1)+' – '+s.getDate()+'/'+(s.getMonth()+1); }
@@ -1315,9 +1318,9 @@ function renderCalDay(){
 function loadScript2(src){ return new Promise(function(res,rej){ var s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=function(){rej(new Error('load'))}; document.head.appendChild(s); }); }
 async function ensureXLSX(){ if(window.XLSX) return true; await loadScript2('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'); return !!window.XLSX; }
 
-async function exportWeekExcel(){
+async function exportWeekExcel(){ return exportWeekExcelFor(weekKey(curMonday)); }
+async function exportWeekExcelFor(wk){
   try{ await ensureXLSX(); }catch(e){ toast('No se pudo cargar Excel (revisa tu internet)'); return; }
-  var wk=weekKey(curMonday);
   var rows=[['Sucursal','Trabajador','Lun','Mar','Mié','Jue','Vie','Sáb','Dom','Extras','Descuento','Ganado','Pagado','Saldo','Estado']];
   shownBranches().forEach(function(bid){
     activeEmps(bid).forEach(function(id){
@@ -1332,9 +1335,12 @@ async function exportWeekExcel(){
   toast('Excel descargado');
 }
 async function exportMonthExcel(){
-  try{ await ensureXLSX(); }catch(e){ toast('No se pudo cargar Excel (revisa tu internet)'); return; }
   var mp=document.getElementById('monthPick').value||isoLocal(curMonday).slice(0,7);
-  var p=mp.split('-'), yy=+p[0], mm=+p[1]-1, branches=monthBranches();
+  var p=mp.split('-'); return exportMonthExcelFor(+p[0], +p[1]-1);
+}
+async function exportMonthExcelFor(yy,mm){
+  try{ await ensureXLSX(); }catch(e){ toast('No se pudo cargar Excel (revisa tu internet)'); return; }
+  var branches=monthBranches();
   var M=computeMonth(yy,mm,branches), wb=XLSX.utils.book_new();
   var rs=[['Resumen '+MONTHS[mm]+' '+yy],[],['Sucursal','Ganado','Pagado','Pendiente']];
   branches.forEach(function(bid){ var b=M.perBranch[bid]; rs.push([branchName(bid),round2(b.bG),round2(b.bP),round2(b.bS)]); });
@@ -1431,9 +1437,10 @@ function printAllWeekReceipts(){
   openPrint('Recibos de la semana', parts.join('<div class="rbreak"></div>'));
 }
 
-function exportWeekPDF(){
-  var wk=weekKey(curMonday), sun=addDays(curMonday,6);
-  var sub='Semana '+curMonday.getDate()+'/'+(curMonday.getMonth()+1)+' al '+sun.getDate()+'/'+(sun.getMonth()+1)+'/'+sun.getFullYear();
+function exportWeekPDF(){ exportWeekPDFFor(weekKey(curMonday)); }
+function exportWeekPDFFor(wk){
+  var mon=parseISO(wk), sun=addDays(mon,6);
+  var sub='Semana '+mon.getDate()+'/'+(mon.getMonth()+1)+' al '+sun.getDate()+'/'+(sun.getMonth()+1)+'/'+sun.getFullYear();
   var inner=pdfLogoHead('Control de Horas y Pagos', sub);
   shownBranches().forEach(function(bid){
     var emps=activeEmps(bid); if(!emps.length) return;
@@ -1448,7 +1455,10 @@ function exportWeekPDF(){
 }
 function exportMonthPDF(){
   var mp=document.getElementById('monthPick').value||isoLocal(curMonday).slice(0,7);
-  var p=mp.split('-'), yy=+p[0], mm=+p[1]-1, branches=monthBranches();
+  var p=mp.split('-'); exportMonthPDFFor(+p[0], +p[1]-1);
+}
+function exportMonthPDFFor(yy,mm){
+  var branches=monthBranches();
   var M=computeMonth(yy,mm,branches);
   var R=computeReport(yy,mm,branches);
   var inner=pdfLogoHead('Resumen mensual', MONTHS[mm]+' '+yy);
@@ -1573,6 +1583,40 @@ function computeReport(yy,mm,branches){
   var empCount=Object.keys(empAgg).filter(function(id){return empAgg[id].horas>0;}).length;
   return {branchTotals:branchTotals,weekly:weekly,topEmp:topEmp,any:any,tot:tot,empCount:empCount};
 }
+function weeksOfMonth(yy,mm){ return Object.keys(DB.weeks||{}).filter(function(wk){ var d=parseISO(wk); return d.getFullYear()===yy && d.getMonth()===mm; }).sort(); }
+function weekPlanned(wk,branches){
+  var res={}; branches.forEach(function(b){ res[b]=0; });
+  var S=(DB.schedule||{})[wk]||{};
+  Object.keys(S).forEach(function(id){ var emp=DB.employees[id]; if(!emp || res[emp.branch]===undefined) return; var arr=S[id]||[], t=0; for(var i=0;i<7;i++) t+=num(arr[i]); res[emp.branch]+=t; });
+  return res;
+}
+function computeReportWeek(wk,branches){
+  var branchTotals=branches.map(function(bid){ return {bid:bid,horas:0,ganado:0,pagado:0,pendiente:0}; });
+  var bt={}; branchTotals.forEach(function(o){ bt[o.bid]=o; });
+  var empAgg={}, dayG=[0,0,0,0,0,0,0], dayP=[0,0,0,0,0,0,0];
+  branches.forEach(function(bid){
+    allEmps(bid).forEach(function(id){
+      var e=(DB.weeks[wk]||{})[id]; if(!e) return;
+      var c=calc(e,bid);
+      if(c.ganado<=0 && c.pagado<=0) return;
+      bt[bid].horas+=c.hrs; bt[bid].ganado+=c.ganado; bt[bid].pagado+=c.pagado; bt[bid].pendiente+=Math.max(0,c.saldo);
+      empAgg[id]=empAgg[id]||{name:DB.employees[id].name,branch:bid,horas:0}; empAgg[id].horas+=c.hrs;
+      var rates=DB.config.rates[bid]||{r:15,re:15};
+      var r=(e.r!=null?e.r:rates.r), re=(e.re!=null?e.re:rates.re);
+      (e.d||[]).forEach(function(cell,i){
+        dayG[i]+= num(cell.h)*r + num(cell.e)*re - num(cell.x);
+        dayP[i]+= num(cell.pm);
+      });
+    });
+  });
+  var daily=DAYS.map(function(d,i){ return {label:d, ganado:dayG[i], pagado:dayP[i]}; });
+  var topEmp=Object.keys(empAgg).map(function(id){return empAgg[id];}).filter(function(e){return e.horas>0;}).sort(function(a,b){return b.horas-a.horas;}).slice(0,8);
+  var any=branchTotals.some(function(b){return b.ganado>0||b.pagado>0;});
+  var tot={ganado:0,pagado:0,pendiente:0,horas:0};
+  branchTotals.forEach(function(b){ tot.ganado+=b.ganado; tot.pagado+=b.pagado; tot.pendiente+=b.pendiente; tot.horas+=b.horas; });
+  var empCount=Object.keys(empAgg).filter(function(id){return empAgg[id].horas>0;}).length;
+  return {branchTotals:branchTotals,daily:daily,topEmp:topEmp,any:any,tot:tot,empCount:empCount};
+}
 var repYM=null;
 function prevYM(y,m){ var d=new Date(y,m-1,1); return {y:d.getFullYear(),m:d.getMonth()}; }
 function kpi(k,v){ return '<div class="kpi"><div class="k">'+k+'</div><div class="v mono">'+v+'</div></div>'; }
@@ -1583,55 +1627,97 @@ function deltaHTML(cur, prev){
   var up=d>0;
   return '<span style="color:'+(up?'#b8791b':'#0e7a5f')+';font-weight:700">'+(up?'▲':'▼')+' '+Math.abs(d).toFixed(0)+'%</span>';
 }
+var repView='mes', repWeekSel=null;
+function setRepView(v){ repView=v; renderReports(); }
+function setRepWeek(wk){ repWeekSel=wk; renderReports(); }
 function repShift(n){ if(!repYM){ repYM={y:curMonday.getFullYear(),m:curMonday.getMonth()}; } var d=new Date(repYM.y,repYM.m+n,1); repYM={y:d.getFullYear(),m:d.getMonth()}; renderReports(); }
+function exportRepPDF(){ if(repView==='semana' && repWeekSel) exportWeekPDFFor(repWeekSel); else exportMonthPDFFor(repYM.y,repYM.m); }
+function exportRepExcel(){ if(repView==='semana' && repWeekSel) exportWeekExcelFor(repWeekSel); else exportMonthExcelFor(repYM.y,repYM.m); }
 function renderReports(){
   if(!document.getElementById('repBody')) return;
   if(!repYM){ repYM={y:curMonday.getFullYear(),m:curMonday.getMonth()}; }
   document.getElementById('repLabel').textContent=MONTHS[repYM.m]+' '+repYM.y;
-  var branches=shownBranches();
-  var R=computeReport(repYM.y,repYM.m,branches);
-  var host=document.getElementById('repBody');
-  if(!R.any){ host.innerHTML='<div class="empty">Sin datos en '+MONTHS[repYM.m]+' '+repYM.y+'.</div>'; return; }
-  var pm=prevYM(repYM.y,repYM.m);
-  var Rp=computeReport(pm.y,pm.m,branches);
-  var activeCount=0; branches.forEach(function(b){ activeCount+=activeEmps(b).length; });
+  var branches=shownBranches(), host=document.getElementById('repBody');
+  repCharts={};
+  var pills='<div class="setpills">'
+    +'<button class="'+(repView==='mes'?'on':'')+'" onclick="setRepView(\'mes\')">📊 Por mes</button>'
+    +'<button class="'+(repView==='semana'?'on':'')+'" onclick="setRepView(\'semana\')">📅 Por semana</button>'
+    +'</div>';
+  var bar='<div class="exbar"><button class="mini" onclick="exportRepPDF()">⬇ PDF de lo que veo</button><button class="mini" onclick="exportRepExcel()">⬇ Excel de lo que veo</button></div>';
+  host.innerHTML = pills + bar + (repView==='mes' ? repMonthHTML(branches) : repWeekHTML(branches));
+}
+function kpiPanel(titulo, R, sub){
   var avg = R.empCount ? R.tot.horas/R.empCount : 0;
-
-  var out='';
-  // ---- KPIs ----
-  out+='<div class="panel"><h3>📊 Indicadores — '+MONTHS[repYM.m]+' '+repYM.y+'</h3><div class="kpis">';
+  var out='<div class="panel"><h3>'+titulo+'</h3><div class="kpis">';
   out+=kpi('Nómina (ganado)', bs(R.tot.ganado));
   out+=kpi('Pagado', bs(R.tot.pagado));
   out+=kpi('Pendiente', bs(R.tot.pendiente));
   out+=kpi('Horas', trim(R.tot.horas)+' h');
   out+=kpi('Trabajaron', R.empCount+' pers.');
   out+=kpi('Prom. h/persona', trim(avg)+' h');
-  out+='</div>';
-  out+='<div class="note" style="margin-top:8px">Activos en el sistema: '+activeCount+' · '+(branches.length>1?'todas las sucursales':branchName(branches[0]))+'</div></div>';
-
-  // ---- Comparativo mes vs mes ----
-  out+='<div class="panel"><h3>🔁 Comparativo con el mes anterior ('+MONTHS[pm.m]+' '+pm.y+')</h3>';
-  out+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Concepto</th><th>Este mes</th><th>'+MONTHS[pm.m].slice(0,3)+'</th><th>Δ</th></tr></thead><tbody>';
+  out+='</div><div class="note" style="margin-top:8px">'+sub+'</div></div>';
+  return out;
+}
+function cmpPanel(titulo, R, Rp, etiqueta, pie){
+  var out='<div class="panel"><h3>'+titulo+'</h3>';
+  out+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Concepto</th><th>Actual</th><th>'+etiqueta+'</th><th>Δ</th></tr></thead><tbody>';
   out+='<tr><td>Ganado</td><td class="mono">'+fmt(R.tot.ganado)+'</td><td class="mono">'+fmt(Rp.tot.ganado)+'</td><td>'+deltaHTML(R.tot.ganado,Rp.tot.ganado)+'</td></tr>';
   out+='<tr><td>Pagado</td><td class="mono">'+fmt(R.tot.pagado)+'</td><td class="mono">'+fmt(Rp.tot.pagado)+'</td><td>'+deltaHTML(R.tot.pagado,Rp.tot.pagado)+'</td></tr>';
   out+='<tr><td>Horas</td><td class="mono">'+trim(R.tot.horas)+'</td><td class="mono">'+trim(Rp.tot.horas)+'</td><td>'+deltaHTML(R.tot.horas,Rp.tot.horas)+'</td></tr>';
-  out+='</tbody></table></div><div class="note" style="margin-top:6px">▲ subió respecto al mes pasado · ▼ bajó</div></div>';
-
-  // ---- Gráficos (en columnas, clic para ampliar) ----
-  repCharts={};
+  out+='</tbody></table></div><div class="note" style="margin-top:6px">'+pie+'</div></div>';
+  return out;
+}
+function planPanel(plan, branchTotals, branches){
+  if(!branches.some(function(b){return plan[b]>0;})) return '';
+  var out='<div class="panel"><h3>📋 Horas: presupuestado (RRHH) vs real</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Sucursal</th><th>Presup.</th><th>Real</th><th>Dif.</th></tr></thead><tbody>';
+  branchTotals.forEach(function(b){ var p=plan[b.bid]||0, diff=b.horas-p; out+='<tr><td>'+branchName(b.bid)+'</td><td class="mono">'+trim(p)+'</td><td class="mono">'+trim(b.horas)+'</td><td class="mono '+(diff>0.5?'neg':'')+'">'+trim(diff)+'</td></tr>'; });
+  return out+'</tbody></table></div></div>';
+}
+function baseCharts(R){
   var g='';
   g+=chartPanel('c_ganado','💰 Ganado por sucursal', svgStacked(R.branchTotals.map(function(b){return {label:branchName(b.bid),pagado:b.pagado,pendiente:b.pendiente};})));
   g+=chartPanel('c_horas','⏱️ Horas por sucursal', svgVBars(R.branchTotals.map(function(b){return {label:branchName(b.bid),value:b.horas,color:BRANCH_COLORS[b.bid]};}),'h'));
+  return g;
+}
+/* ---- Tablero: POR MES ---- */
+function repMonthHTML(branches){
+  var R=computeReport(repYM.y,repYM.m,branches);
+  if(!R.any) return '<div class="empty">Sin datos en '+MONTHS[repYM.m]+' '+repYM.y+'.</div>';
+  var pm=prevYM(repYM.y,repYM.m), Rp=computeReport(pm.y,pm.m,branches);
+  var activeCount=0; branches.forEach(function(b){ activeCount+=activeEmps(b).length; });
+  var out=kpiPanel('📊 Indicadores — '+MONTHS[repYM.m]+' '+repYM.y, R,
+    'Activos en el sistema: '+activeCount+' · '+(branches.length>1?'todas las sucursales':branchName(branches[0])));
+  out+=cmpPanel('🔁 Comparativo con el mes anterior ('+MONTHS[pm.m]+' '+pm.y+')', R, Rp, MONTHS[pm.m].slice(0,3), '▲ subió respecto al mes pasado · ▼ bajó');
+  var g=baseCharts(R);
   if(R.weekly.length){ g+=chartPanel('c_evo','📈 Evolución semanal', svgLines(R.weekly.map(function(w){return w.label;}),[{name:'Ganado',color:'#122036',values:R.weekly.map(function(w){return w.ganado;})},{name:'Pagado',color:'#0e7a5f',values:R.weekly.map(function(w){return w.pagado;})}])); }
   if(R.topEmp.length){ g+=chartPanel('c_top','🏆 Top trabajadores por horas', svgHBars(R.topEmp.map(function(e){return {label:e.name,value:e.horas,color:BRANCH_COLORS[e.branch]};}))); }
   out+='<div class="chartgrid">'+g+'</div>';
-  var plan=monthPlanned(repYM.y,repYM.m,branches);
-  if(branches.some(function(b){return plan[b]>0;})){
-    out+='<div class="panel"><h3>📋 Horas: presupuestado (RRHH) vs real</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Sucursal</th><th>Presup.</th><th>Real</th><th>Dif.</th></tr></thead><tbody>';
-    R.branchTotals.forEach(function(b){ var p=plan[b.bid]||0, diff=b.horas-p; out+='<tr><td>'+branchName(b.bid)+'</td><td class="mono">'+trim(p)+'</td><td class="mono">'+trim(b.horas)+'</td><td class="mono '+(diff>0.5?'neg':'')+'">'+trim(diff)+'</td></tr>'; });
-    out+='</tbody></table></div></div>';
-  }
-  host.innerHTML=out;
+  out+=planPanel(monthPlanned(repYM.y,repYM.m,branches), R.branchTotals, branches);
+  return out;
+}
+/* ---- Tablero: POR SEMANA ---- */
+function repWeekHTML(branches){
+  var wks=weeksOfMonth(repYM.y,repYM.m);
+  if(!wks.length) return '<div class="empty">Sin datos en '+MONTHS[repYM.m]+' '+repYM.y+'.</div>';
+  if(!repWeekSel || wks.indexOf(repWeekSel)<0) repWeekSel=wks[wks.length-1];
+  var sel=repWeekSel, d=parseISO(sel), sun=addDays(d,6);
+  var out='<div class="panel"><h3>📅 Elige la semana — '+MONTHS[repYM.m]+' '+repYM.y+'</h3>';
+  out+='<div class="setpills" style="padding-bottom:4px">'+wks.map(function(wk){
+    return '<button class="'+(wk===sel?'on':'')+'" onclick="setRepWeek(\''+wk+'\')">'+wkLabel(wk)+'</button>'; }).join('')+'</div>';
+  out+='<div class="note">Semana del <b>'+d.getDate()+'/'+(d.getMonth()+1)+'</b> al <b>'+sun.getDate()+'/'+(sun.getMonth()+1)+'</b> (lunes a domingo).</div></div>';
+  var R=computeReportWeek(sel,branches);
+  if(!R.any) return out+'<div class="empty">Sin datos en esta semana.</div>';
+  var prevWk=isoLocal(addDays(d,-7)), Rp=computeReportWeek(prevWk,branches);
+  var activeCount=0; branches.forEach(function(b){ activeCount+=activeEmps(b).length; });
+  out+=kpiPanel('📊 Indicadores — semana '+wkLabel(sel), R,
+    'Activos en el sistema: '+activeCount+' · '+(branches.length>1?'todas las sucursales':branchName(branches[0])));
+  out+=cmpPanel('🔁 Comparativo con la semana anterior ('+wkLabel(prevWk)+')', R, Rp, wkLabel(prevWk), '▲ subió respecto a la semana pasada · ▼ bajó');
+  var g=baseCharts(R);
+  g+=chartPanel('c_evo','📈 Ganado y pagado por día', svgLines(R.daily.map(function(x){return x.label;}),[{name:'Ganado',color:'#122036',values:R.daily.map(function(x){return x.ganado;})},{name:'Pagado',color:'#0e7a5f',values:R.daily.map(function(x){return x.pagado;})}]));
+  if(R.topEmp.length){ g+=chartPanel('c_top','🏆 Top trabajadores por horas', svgHBars(R.topEmp.map(function(e){return {label:e.name,value:e.horas,color:BRANCH_COLORS[e.branch]};}))); }
+  out+='<div class="chartgrid">'+g+'</div>';
+  out+=planPanel(weekPlanned(sel,branches), R.branchTotals, branches);
+  return out;
 }
 var repCharts={};
 function chartPanel(key,title,svg){ repCharts[key]={title:title,svg:svg}; return '<div class="panel chartpanel" onclick="zoomChart(\''+key+'\')"><h3>'+title+' <span class="zoomhint">🔍 ampliar</span></h3>'+svg+'</div>'; }
