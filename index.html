@@ -505,7 +505,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v25';
+var APP_VERSION = 'v26';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -1091,8 +1091,10 @@ function computeMonth(yy,mm,branches){
   return {wks:wks,perBranch:perBranch,GG:GG,GP:GP,GS:GS};
 }
 
-var monthWeekSel=null;
+var monthView='mes', monthWeekSel=null;
+function setMonthView(v){ monthView=v; renderMonth(); }
 function setMonthWeek(wk){ monthWeekSel=wk; renderMonth(); }
+function wkLabel(wk){ var d=parseISO(wk), s=addDays(d,6); return d.getDate()+'/'+(d.getMonth()+1)+' – '+s.getDate()+'/'+(s.getMonth()+1); }
 function renderMonth(){
   var mp=document.getElementById('monthPick').value;
   if(!mp){ mp=isoLocal(curMonday).slice(0,7); document.getElementById('monthPick').value=mp; }
@@ -1100,7 +1102,15 @@ function renderMonth(){
   var branches=monthBranches();
   var M=computeMonth(yy,mm,branches);
   var host=document.getElementById('monthBody');
-  if(!M.wks.length){ host.innerHTML='<div class="empty">Sin registros en '+MONTHS[mm]+' '+yy+'.</div>'; return; }
+  var pills='<div class="setpills">'
+    +'<button class="'+(monthView==='mes'?'on':'')+'" onclick="setMonthView(\'mes\')">📊 Por mes</button>'
+    +'<button class="'+(monthView==='semana'?'on':'')+'" onclick="setMonthView(\'semana\')">📅 Por semana</button>'
+    +'</div>';
+  if(!M.wks.length){ host.innerHTML=pills+'<div class="empty">Sin registros en '+MONTHS[mm]+' '+yy+'.</div>'; return; }
+  host.innerHTML = pills + (monthView==='mes' ? monthViewHTML(M,branches,yy,mm) : weekViewHTML(M,branches,yy,mm));
+}
+/* ---- Sub-vista: POR MES ---- */
+function monthViewHTML(M,branches,yy,mm){
   var out='';
   if(branches.length>1){
     out+='<div class="panel"><h3>🧮 Total general — '+MONTHS[mm]+' '+yy+'</h3>';
@@ -1110,42 +1120,56 @@ function renderMonth(){
     out+='<tr class="tot"><td>Total</td><td class="mono">'+fmt(M.GG)+'</td><td class="mono pos">'+fmt(M.GP)+'</td><td class="mono '+(M.GS>0.009?'neg':'')+'">'+fmt(M.GS)+'</td></tr>';
     out+='</tbody></table></div></div>';
   }
-  // ---- Total general POR SEMANA ----
-  if(M.wks.length){
-    if(!monthWeekSel || M.wks.indexOf(monthWeekSel)<0) monthWeekSel=M.wks[M.wks.length-1];
-    var sel=monthWeekSel, wG=0, wP=0, wS=0;
-    branches.forEach(function(bid){ var w=M.perBranch[bid].perWeek[sel]; if(w){ wG+=w.g; wP+=w.p; wS+=w.s; } });
-    var selD=parseISO(sel), selSun=addDays(selD,6);
-    out+='<div class="panel"><h3>📅 Total general por semana — '+MONTHS[mm]+' '+yy+'</h3>';
-    out+='<div class="setpills">'+M.wks.map(function(wk){ var d=parseISO(wk), sun=addDays(d,6);
-      return '<button class="'+(wk===sel?'on':'')+'" onclick="setMonthWeek(\''+wk+'\')">'+d.getDate()+'/'+(d.getMonth()+1)+' – '+sun.getDate()+'/'+(sun.getMonth()+1)+'</button>'; }).join('')+'</div>';
-    out+='<div class="note" style="margin:2px 0 10px">Semana del <b>'+selD.getDate()+'/'+(selD.getMonth()+1)+'</b> al <b>'+selSun.getDate()+'/'+(selSun.getMonth()+1)+'</b> (lunes a domingo).</div>';
+  branches.forEach(function(bid){
+    var b=M.perBranch[bid];
+    var rows=Object.keys(b.perEmp).filter(function(id){return b.perEmp[id].any || DB.employees[id].active;}).sort(function(a,c){return (DB.employees[a].order||0)-(DB.employees[c].order||0);});
+    out+='<div class="panel"><h3>'+branchLogoHTML(bid)+' '+branchName(bid)+' — todo el mes</h3>';
+    out+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Trabajador</th><th>Ganado</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody>';
+    rows.forEach(function(id){ var d=b.perEmp[id]; out+='<tr><td>'+esc(DB.employees[id].name)+'</td><td class="mono">'+fmt(d.g)+'</td><td class="mono pos">'+fmt(d.p)+'</td><td class="mono '+(d.s>0.009?'neg':'')+'">'+fmt(d.s)+'</td></tr>'; });
+    out+='<tr class="tot"><td>Total '+branchName(bid)+'</td><td class="mono">'+fmt(b.bG)+'</td><td class="mono pos">'+fmt(b.bP)+'</td><td class="mono '+(b.bS>0.009?'neg':'')+'">'+fmt(b.bS)+'</td></tr>';
+    out+='</tbody></table></div></div>';
+  });
+  return out;
+}
+/* ---- Sub-vista: POR SEMANA ---- */
+function weekViewHTML(M,branches,yy,mm){
+  if(!monthWeekSel || M.wks.indexOf(monthWeekSel)<0) monthWeekSel=M.wks[M.wks.length-1];
+  var sel=monthWeekSel, selD=parseISO(sel), selSun=addDays(selD,6), out='';
+  var wG=0,wP=0,wS=0;
+  branches.forEach(function(bid){ var w=M.perBranch[bid].perWeek[sel]; if(w){ wG+=w.g; wP+=w.p; wS+=w.s; } });
+  out+='<div class="panel"><h3>📅 Elige la semana — '+MONTHS[mm]+' '+yy+'</h3>';
+  out+='<div class="setpills" style="padding-bottom:4px">'+M.wks.map(function(wk){
+    return '<button class="'+(wk===sel?'on':'')+'" onclick="setMonthWeek(\''+wk+'\')">'+wkLabel(wk)+'</button>'; }).join('')+'</div>';
+  out+='<div class="note">Semana del <b>'+selD.getDate()+'/'+(selD.getMonth()+1)+'</b> al <b>'+selSun.getDate()+'/'+(selSun.getMonth()+1)+'</b> (lunes a domingo).</div></div>';
+  if(branches.length>1){
+    out+='<div class="panel"><h3>🧮 Total general — semana '+wkLabel(sel)+'</h3>';
     out+='<div class="strip" style="margin-bottom:12px">'+statHTML('Ganado',bs(wG),'g')+statHTML('Pagado',bs(wP),'p')+statHTML('Pendiente',bs(wS),'s')+'</div>';
     out+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Sucursal</th><th>Ganado</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody>';
     branches.forEach(function(bid){ var w=M.perBranch[bid].perWeek[sel]||{g:0,p:0,s:0};
       out+='<tr><td>'+branchName(bid)+'</td><td class="mono">'+fmt(w.g)+'</td><td class="mono pos">'+fmt(w.p)+'</td><td class="mono '+(w.s>0.009?'neg':'')+'">'+fmt(w.s)+'</td></tr>'; });
     out+='<tr class="tot"><td>Total</td><td class="mono">'+fmt(wG)+'</td><td class="mono pos">'+fmt(wP)+'</td><td class="mono '+(wS>0.009?'neg':'')+'">'+fmt(wS)+'</td></tr>';
     out+='</tbody></table></div></div>';
+  } else {
+    out+='<div class="panel"><h3>🧮 Total — semana '+wkLabel(sel)+'</h3>';
+    out+='<div class="strip">'+statHTML('Ganado',bs(wG),'g')+statHTML('Pagado',bs(wP),'p')+statHTML('Pendiente',bs(wS),'s')+'</div></div>';
   }
-
   branches.forEach(function(bid){
-    var b=M.perBranch[bid];
-    var rows=Object.keys(b.perEmp).filter(function(id){return b.perEmp[id].any || DB.employees[id].active;}).sort(function(a,c){return (DB.employees[a].order||0)-(DB.employees[c].order||0);});
-    out+='<div class="panel"><h3>'+branchLogoHTML(bid)+' '+branchName(bid)+'</h3>';
+    var wk=DB.weeks[sel]||{}, rows=[], bG=0,bP=0,bS=0;
+    allEmps(bid).forEach(function(id){
+      var e=wk[id]; if(!e) return;
+      var c=calc(e,bid); if(c.ganado<=0.009 && c.pagado<=0.009) return;
+      rows.push({name:DB.employees[id].name, order:(DB.employees[id].order||0), g:c.ganado, p:c.pagado, s:c.saldo});
+      bG+=c.ganado; bP+=c.pagado; bS+=c.saldo;
+    });
+    rows.sort(function(a,b){return a.order-b.order;});
+    out+='<div class="panel"><h3>'+branchLogoHTML(bid)+' '+branchName(bid)+' — semana '+wkLabel(sel)+'</h3>';
+    if(!rows.length){ out+='<div class="note">Sin registros de esta sucursal en esta semana.</div></div>'; return; }
     out+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Trabajador</th><th>Ganado</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody>';
-    rows.forEach(function(id){ var d=b.perEmp[id]; out+='<tr><td>'+esc(DB.employees[id].name)+'</td><td class="mono">'+fmt(d.g)+'</td><td class="mono pos">'+fmt(d.p)+'</td><td class="mono '+(d.s>0.009?'neg':'')+'">'+fmt(d.s)+'</td></tr>'; });
-    out+='<tr class="tot"><td>Total '+branchName(bid)+'</td><td class="mono">'+fmt(b.bG)+'</td><td class="mono pos">'+fmt(b.bP)+'</td><td class="mono '+(b.bS>0.009?'neg':'')+'">'+fmt(b.bS)+'</td></tr>';
-    out+='</tbody></table></div>';
-    var wkeys=Object.keys(b.perWeek).sort();
-    if(wkeys.length){
-      out+='<div class="divider"></div><div class="note" style="margin-bottom:6px;font-weight:700;color:var(--ink2)">Desglose por semana</div>';
-      out+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Semana</th><th>Ganado</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody>';
-      wkeys.forEach(function(wk){ var w=b.perWeek[wk]; var d=parseISO(wk); var sun=addDays(d,6); var lbl=d.getDate()+'/'+(d.getMonth()+1)+' – '+sun.getDate()+'/'+(sun.getMonth()+1); out+='<tr><td>'+lbl+'</td><td class="mono">'+fmt(w.g)+'</td><td class="mono pos">'+fmt(w.p)+'</td><td class="mono '+(w.s>0.009?'neg':'')+'">'+fmt(w.s)+'</td></tr>'; });
-      out+='</tbody></table></div>';
-    }
-    out+='</div>';
+    rows.forEach(function(d){ out+='<tr><td>'+esc(d.name)+'</td><td class="mono">'+fmt(d.g)+'</td><td class="mono pos">'+fmt(d.p)+'</td><td class="mono '+(d.s>0.009?'neg':'')+'">'+fmt(d.s)+'</td></tr>'; });
+    out+='<tr class="tot"><td>Total '+branchName(bid)+'</td><td class="mono">'+fmt(bG)+'</td><td class="mono pos">'+fmt(bP)+'</td><td class="mono '+(bS>0.009?'neg':'')+'">'+fmt(bS)+'</td></tr>';
+    out+='</tbody></table></div></div>';
   });
-  host.innerHTML=out;
+  return out;
 }
 
 /* ================= RENDER: CALENDARIO ================= */
