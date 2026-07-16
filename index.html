@@ -505,7 +505,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v27';
+var APP_VERSION = 'v28';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -1093,7 +1093,17 @@ function computeMonth(yy,mm,branches){
 
 var monthView='mes', monthWeekSel=null;
 function curMonthYM(){ var mp=document.getElementById('monthPick').value||isoLocal(curMonday).slice(0,7); var p=mp.split('-'); return {y:+p[0], m:+p[1]-1}; }
-function exportResumenPDF(){ if(monthView==='semana' && monthWeekSel) exportWeekPDFFor(monthWeekSel); else { var t=curMonthYM(); exportMonthPDFFor(t.y,t.m); } }
+function exportResumenPDF(){
+  var t=curMonthYM(), branches=monthBranches(), M=computeMonth(t.y,t.m,branches), inner, sub;
+  if(!M.wks.length){ toast('Sin registros en ese mes'); return; }
+  printMode=true;
+  try{
+    if(monthView==='semana'){ inner=weekViewHTML(M,branches,t.y,t.m,true); sub='Semana '+wkLabel(monthWeekSel)+' · '+MONTHS[t.m]+' '+t.y; }
+    else { inner=monthViewHTML(M,branches,t.y,t.m); sub=MONTHS[t.m]+' '+t.y; }
+  } finally { printMode=false; }
+  sub += ' · '+(branches.length>1?'Todas las sucursales':branchName(branches[0]));
+  printLikeApp('Resumen', sub, inner);
+}
 function exportResumenExcel(){ if(monthView==='semana' && monthWeekSel) exportWeekExcelFor(monthWeekSel); else { var t=curMonthYM(); exportMonthExcelFor(t.y,t.m); } }
 function setMonthView(v){ monthView=v; renderMonth(); }
 function setMonthWeek(wk){ monthWeekSel=wk; renderMonth(); }
@@ -1135,15 +1145,17 @@ function monthViewHTML(M,branches,yy,mm){
   return out;
 }
 /* ---- Sub-vista: POR SEMANA ---- */
-function weekViewHTML(M,branches,yy,mm){
+function weekViewHTML(M,branches,yy,mm,forPrint){
   if(!monthWeekSel || M.wks.indexOf(monthWeekSel)<0) monthWeekSel=M.wks[M.wks.length-1];
   var sel=monthWeekSel, selD=parseISO(sel), selSun=addDays(selD,6), out='';
   var wG=0,wP=0,wS=0;
   branches.forEach(function(bid){ var w=M.perBranch[bid].perWeek[sel]; if(w){ wG+=w.g; wP+=w.p; wS+=w.s; } });
-  out+='<div class="panel"><h3>📅 Elige la semana — '+MONTHS[mm]+' '+yy+'</h3>';
-  out+='<div class="setpills" style="padding-bottom:4px">'+M.wks.map(function(wk){
-    return '<button class="'+(wk===sel?'on':'')+'" onclick="setMonthWeek(\''+wk+'\')">'+wkLabel(wk)+'</button>'; }).join('')+'</div>';
-  out+='<div class="note">Semana del <b>'+selD.getDate()+'/'+(selD.getMonth()+1)+'</b> al <b>'+selSun.getDate()+'/'+(selSun.getMonth()+1)+'</b> (lunes a domingo).</div></div>';
+  if(!forPrint){
+    out+='<div class="panel"><h3>📅 Elige la semana — '+MONTHS[mm]+' '+yy+'</h3>';
+    out+='<div class="setpills" style="padding-bottom:4px">'+M.wks.map(function(wk){
+      return '<button class="'+(wk===sel?'on':'')+'" onclick="setMonthWeek(\''+wk+'\')">'+wkLabel(wk)+'</button>'; }).join('')+'</div>';
+    out+='<div class="note">Semana del <b>'+selD.getDate()+'/'+(selD.getMonth()+1)+'</b> al <b>'+selSun.getDate()+'/'+(selSun.getMonth()+1)+'</b> (lunes a domingo).</div></div>';
+  }
   if(branches.length>1){
     out+='<div class="panel"><h3>🧮 Total general — semana '+wkLabel(sel)+'</h3>';
     out+='<div class="strip" style="margin-bottom:12px">'+statHTML('Ganado',bs(wG),'g')+statHTML('Pagado',bs(wP),'p')+statHTML('Pendiente',bs(wS),'s')+'</div>';
@@ -1358,6 +1370,33 @@ async function exportMonthExcelFor(yy,mm){
   });
   XLSX.writeFile(wb,'resumen-'+mp+'.xlsx');
   toast('Excel descargado');
+}
+var printMode=false;
+function appCSS(){ var s=document.querySelector('style'); return s?s.textContent:''; }
+var PRINT_OVERRIDE =
+   'body{background:#fff!important;margin:0;padding:0}'
+  +'.wrap{max-width:1000px;margin:0 auto;padding:16px}'
+  +'.phead{display:flex;align-items:center;gap:14px;border-bottom:3px solid #122036;padding-bottom:10px;margin-bottom:16px}'
+  +'.phead img{height:38px;width:auto}'
+  +'.phead .t{font-size:19px;font-weight:800;color:#122036;line-height:1.2}'
+  +'.phead .s{font-size:12px;color:#7b8aa0;margin-top:2px}'
+  +'.panel{box-shadow:none;border:1px solid #e3ddce;page-break-inside:avoid;break-inside:avoid}'
+  +'.chartgrid{grid-template-columns:repeat(2,1fr)!important}'
+  +'.chartpanel{cursor:default}'
+  +'.kpis{grid-template-columns:repeat(3,1fr)!important}'
+  +'.strip{display:flex;gap:8px}'
+  +'*{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+  +'@media print{.noprint{display:none} .wrap{padding:0} @page{size:A4;margin:12mm}}';
+function printLikeApp(title, sub, inner){
+  var w=window.open('','_blank');
+  if(!w){ toast('Permite ventanas emergentes para el PDF'); return; }
+  w.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>'+title+'</title>'
+    +'<style>'+appCSS()+'</style><style>'+PRINT_OVERRIDE+'</style></head><body><div class="wrap">'
+    +'<div class="phead"><img src="'+CONTAX_LOGO+'"><div><div class="t">'+title+'</div><div class="s">'+sub+'</div></div></div>'
+    +inner
+    +'<div class="noprint" style="margin-top:18px"><button onclick="window.print()" style="padding:9px 16px">Guardar como PDF / Imprimir</button></div>'
+    +'</div><scr'+'ipt>setTimeout(function(){window.print();},700);</scr'+'ipt></body></html>');
+  w.document.close();
 }
 function openPrint(title,inner){
   var w=window.open('','_blank');
@@ -1631,7 +1670,16 @@ var repView='mes', repWeekSel=null;
 function setRepView(v){ repView=v; renderReports(); }
 function setRepWeek(wk){ repWeekSel=wk; renderReports(); }
 function repShift(n){ if(!repYM){ repYM={y:curMonday.getFullYear(),m:curMonday.getMonth()}; } var d=new Date(repYM.y,repYM.m+n,1); repYM={y:d.getFullYear(),m:d.getMonth()}; renderReports(); }
-function exportRepPDF(){ if(repView==='semana' && repWeekSel) exportWeekPDFFor(repWeekSel); else exportMonthPDFFor(repYM.y,repYM.m); }
+function exportRepPDF(){
+  var branches=shownBranches(), inner, sub;
+  printMode=true;
+  try{
+    if(repView==='semana' && repWeekSel){ inner=repWeekHTML(branches,true); sub='Semana '+wkLabel(repWeekSel)+' · '+MONTHS[repYM.m]+' '+repYM.y; }
+    else { inner=repMonthHTML(branches); sub=MONTHS[repYM.m]+' '+repYM.y; }
+  } finally { printMode=false; }
+  sub += ' · '+(branches.length>1?'Todas las sucursales':branchName(branches[0]));
+  printLikeApp('Tablero', sub, inner);
+}
 function exportRepExcel(){ if(repView==='semana' && repWeekSel) exportWeekExcelFor(repWeekSel); else exportMonthExcelFor(repYM.y,repYM.m); }
 function renderReports(){
   if(!document.getElementById('repBody')) return;
@@ -1696,15 +1744,17 @@ function repMonthHTML(branches){
   return out;
 }
 /* ---- Tablero: POR SEMANA ---- */
-function repWeekHTML(branches){
+function repWeekHTML(branches, forPrint){
   var wks=weeksOfMonth(repYM.y,repYM.m);
   if(!wks.length) return '<div class="empty">Sin datos en '+MONTHS[repYM.m]+' '+repYM.y+'.</div>';
   if(!repWeekSel || wks.indexOf(repWeekSel)<0) repWeekSel=wks[wks.length-1];
-  var sel=repWeekSel, d=parseISO(sel), sun=addDays(d,6);
-  var out='<div class="panel"><h3>📅 Elige la semana — '+MONTHS[repYM.m]+' '+repYM.y+'</h3>';
-  out+='<div class="setpills" style="padding-bottom:4px">'+wks.map(function(wk){
-    return '<button class="'+(wk===sel?'on':'')+'" onclick="setRepWeek(\''+wk+'\')">'+wkLabel(wk)+'</button>'; }).join('')+'</div>';
-  out+='<div class="note">Semana del <b>'+d.getDate()+'/'+(d.getMonth()+1)+'</b> al <b>'+sun.getDate()+'/'+(sun.getMonth()+1)+'</b> (lunes a domingo).</div></div>';
+  var sel=repWeekSel, d=parseISO(sel), sun=addDays(d,6), out='';
+  if(!forPrint){
+    out+='<div class="panel"><h3>📅 Elige la semana — '+MONTHS[repYM.m]+' '+repYM.y+'</h3>';
+    out+='<div class="setpills" style="padding-bottom:4px">'+wks.map(function(wk){
+      return '<button class="'+(wk===sel?'on':'')+'" onclick="setRepWeek(\''+wk+'\')">'+wkLabel(wk)+'</button>'; }).join('')+'</div>';
+    out+='<div class="note">Semana del <b>'+d.getDate()+'/'+(d.getMonth()+1)+'</b> al <b>'+sun.getDate()+'/'+(sun.getMonth()+1)+'</b> (lunes a domingo).</div></div>';
+  }
   var R=computeReportWeek(sel,branches);
   if(!R.any) return out+'<div class="empty">Sin datos en esta semana.</div>';
   var prevWk=isoLocal(addDays(d,-7)), Rp=computeReportWeek(prevWk,branches);
@@ -1720,7 +1770,11 @@ function repWeekHTML(branches){
   return out;
 }
 var repCharts={};
-function chartPanel(key,title,svg){ repCharts[key]={title:title,svg:svg}; return '<div class="panel chartpanel" onclick="zoomChart(\''+key+'\')"><h3>'+title+' <span class="zoomhint">🔍 ampliar</span></h3>'+svg+'</div>'; }
+function chartPanel(key,title,svg){
+  if(printMode) return '<div class="panel"><h3>'+title+'</h3>'+svg+'</div>';
+  repCharts[key]={title:title,svg:svg};
+  return '<div class="panel chartpanel" onclick="zoomChart(\''+key+'\')"><h3>'+title+' <span class="zoomhint">🔍 ampliar</span></h3>'+svg+'</div>';
+}
 function zoomChart(key){ var c=repCharts[key]; if(!c) return; openModal('<h3 style="margin-bottom:14px">'+c.title+'</h3>'+c.svg+'<div class="acts" style="margin-top:16px"><button class="mini" onclick="closeModal()">Cerrar</button></div>', true); }
 
 /* ================= RENDER: HORARIOS (RRHH) ================= */
