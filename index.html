@@ -97,6 +97,12 @@
   .setpills{display:flex; gap:7px; overflow-x:auto; padding:2px 0 12px; -webkit-overflow-scrolling:touch}
   .setpills button{flex:0 0 auto; border:1px solid var(--line); background:var(--card); border-radius:20px; padding:8px 15px; font-size:13px; font-weight:600; color:var(--ink2); white-space:nowrap}
   .setpills button.on{background:#1f4e8c; color:#fff; border-color:#1f4e8c}
+  .ratecard{border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px}
+  .rchead{margin-bottom:9px; display:flex; align-items:center; gap:7px; flex-wrap:wrap}
+  .raterow{display:flex; gap:7px; align-items:center; flex-wrap:wrap; margin-bottom:7px}
+  .raterow .rl{width:52px; font-size:12.5px; font-weight:700; color:var(--ink2)}
+  .raterow .rl2{font-size:12px; color:var(--muted)}
+  .ratepill{display:inline-block; background:var(--chip); border-radius:14px; padding:3px 9px; font-size:11.5px; margin:3px 3px 0 0}
 
   /* ---------- TABS ---------- */
   nav.tabs{position:fixed; bottom:0; left:0; right:0; z-index:25;
@@ -505,7 +511,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v28';
+var APP_VERSION = 'v29';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -644,6 +650,7 @@ function migrateUsers(){
     if(u.name==null) u.name='';
     if(u.cargo==null) u.cargo='';
   });
+  try{ ensureRateHist(); }catch(e){}
 }
 function loadLocal(){
   try{ var raw=localStorage.getItem(LS_KEY); if(raw){ DB=JSON.parse(raw); migrateUsers(); return; } }catch(e){}
@@ -716,12 +723,54 @@ function startApp(){
 
 /* ================= ENTRADAS (semana/empleado) ================= */
 function weekKey(monday){ return isoLocal(monday); }
+/* ===== Tarifas por fecha de vigencia (normal y extra por separado) ===== */
+function ensureRateHist(){
+  DB.config.rateHist = DB.config.rateHist || {};
+  BRANCHES.forEach(function(b){
+    var cur=DB.config.rates[b.id]||{r:15,re:15};
+    var h=DB.config.rateHist[b.id];
+    if(!h){ h={r:[],re:[]}; DB.config.rateHist[b.id]=h; }
+    if(!h.r||!h.r.length) h.r=[{from:'2000-01-01', v:num(cur.r!=null?cur.r:15)}];
+    if(!h.re||!h.re.length) h.re=[{from:'2000-01-01', v:num(cur.re!=null?cur.re:15)}];
+    h.r.sort(function(a,b){return a.from<b.from?-1:1;});
+    h.re.sort(function(a,b){return a.from<b.from?-1:1;});
+  });
+}
+function rateAt(bid, dateISO, which){
+  var h=(DB.config.rateHist&&DB.config.rateHist[bid]&&DB.config.rateHist[bid][which])||[];
+  var v=null;
+  for(var i=0;i<h.length;i++){ if(h[i].from<=dateISO) v=num(h[i].v); }
+  if(v===null){ if(h.length) return num(h[0].v); var cur=DB.config.rates[bid]||{}; return num(cur[which]!=null?cur[which]:15); }
+  return v;
+}
+function currentRate(bid, which){ return rateAt(bid, today(), which); }
+function syncCurrentRate(bid){ DB.config.rates[bid]=DB.config.rates[bid]||{r:15,re:15}; DB.config.rates[bid].r=currentRate(bid,'r'); DB.config.rates[bid].re=currentRate(bid,'re'); }
+function addRate(bid, which, fromISO, val){
+  if(!isAdmin()) return;
+  if(!fromISO){ toast('Coloca la fecha de vigencia'); return; }
+  var v=num(val); if(v<=0){ toast('Coloca la tarifa'); return; }
+  ensureRateHist();
+  var h=DB.config.rateHist[bid][which];
+  var ex=h.filter(function(e){return e.from===fromISO;})[0];
+  if(ex){ ex.v=v; } else { h.push({from:fromISO, v:v}); }
+  h.sort(function(a,b){return a.from<b.from?-1:1;});
+  syncCurrentRate(bid); saveLocal(); renderSettings(); renderWeek();
+  toast('Tarifa guardada');
+}
+function delRate(bid, which, from){
+  if(!isAdmin()) return;
+  var h=DB.config.rateHist[bid][which];
+  if(h.length<=1){ toast('Debe quedar al menos una tarifa'); return; }
+  DB.config.rateHist[bid][which]=h.filter(function(e){return e.from!==from;});
+  syncCurrentRate(bid); saveLocal(); renderSettings(); renderWeek();
+  toast('Tarifa eliminada');
+}
 function getEntry(wk, empId, create){
   DB.weeks[wk] = DB.weeks[wk] || {};
   if(!DB.weeks[wk][empId]){
     if(!create) return {d:[{},{},{},{},{},{},{}], p:[], r:null, re:null, _ghost:true};
-    var rates=DB.config.rates[DB.employees[empId].branch]||{r:15,re:15};
-    DB.weeks[wk][empId]={ d:[{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0}], p:[], r:rates.r, re:rates.re };
+    var bid=DB.employees[empId].branch;
+    DB.weeks[wk][empId]={ d:[{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0}], p:[], r:rateAt(bid,wk,'r'), re:rateAt(bid,wk,'re') };
   }
   return DB.weeks[wk][empId];
 }
@@ -1982,12 +2031,19 @@ function renderSettings(){
   // tarifas
   var rb=document.getElementById('ratesBox'); var h='';
   var editable = isAdmin();
+  ensureRateHist();
   BRANCHES.forEach(function(b){
     if(!editable && !seesAll() && session.branch!==b.id) return;
-    var r=DB.config.rates[b.id]||{r:15,re:15};
-    h+='<div class="row"><div class="grow"><b>'+b.name+'</b></div>';
-    h+='<div style="text-align:right"><span class="tag">Normal Bs/h</span><br><input class="fld mono" style="width:90px" value="'+r.r+'" inputmode="decimal" '+(editable?'':'disabled')+' onchange="setRate(\''+b.id+'\',\'r\',this.value)"></div>';
-    h+='<div style="text-align:right"><span class="tag">Extra Bs/h</span><br><input class="fld mono" style="width:90px" value="'+r.re+'" inputmode="decimal" '+(editable?'':'disabled')+' onchange="setRate(\''+b.id+'\',\'re\',this.value)"></div>';
+    var cn=currentRate(b.id,'r'), ce=currentRate(b.id,'re');
+    h+='<div class="ratecard"><div class="rchead">'+branchLogoHTML(b.id)+' <b>'+b.name+'</b> <span class="tag">vigente hoy: Normal '+trim(cn)+' · Extra '+trim(ce)+' Bs/h</span></div>';
+    if(editable){
+      h+='<div class="raterow"><div class="rl">Normal</div><input class="fld mono" id="rn_'+b.id+'" style="width:80px" inputmode="decimal" placeholder="Bs/h"><span class="rl2">desde</span><input class="fld" id="rnf_'+b.id+'" type="date" style="width:150px" value="'+today()+'"><button class="mini acc" onclick="addRate(\''+b.id+'\',\'r\',document.getElementById(\'rnf_'+b.id+'\').value,document.getElementById(\'rn_'+b.id+'\').value)">Aplicar</button></div>';
+      h+='<div class="raterow"><div class="rl">Extra</div><input class="fld mono" id="re_'+b.id+'" style="width:80px" inputmode="decimal" placeholder="Bs/h"><span class="rl2">desde</span><input class="fld" id="ref_'+b.id+'" type="date" style="width:150px" value="'+today()+'"><button class="mini acc" onclick="addRate(\''+b.id+'\',\'re\',document.getElementById(\'ref_'+b.id+'\').value,document.getElementById(\'re_'+b.id+'\').value)">Aplicar</button></div>';
+      h+='<div class="note" style="margin-top:6px"><b>Historial Normal:</b> '+histLine(b.id,'r')+'</div>';
+      h+='<div class="note"><b>Historial Extra:</b> '+histLine(b.id,'re')+'</div>';
+    } else {
+      h+='<div class="note">Normal '+trim(cn)+' · Extra '+trim(ce)+' Bs/h</div>';
+    }
     h+='</div>';
   });
   rb.innerHTML=h;
@@ -2073,7 +2129,14 @@ function showSetSection(sec){
   var pills=document.querySelectorAll('#setPills button'); for(var i=0;i<pills.length;i++) pills[i].classList.toggle('on', pills[i].getAttribute('data-ss')===sec);
   var secs=document.querySelectorAll('#scrSet .setsec'); for(var j=0;j<secs.length;j++){ secs[j].style.display = (secs[j].getAttribute('data-sec')===sec) ? 'block' : 'none'; }
 }
-function setRate(bid,f,val){ DB.config.rates[bid]=DB.config.rates[bid]||{r:15,re:15}; DB.config.rates[bid][f]=num(val); saveLocal(); renderWeek(); toast('Tarifa actualizada'); }
+function histLine(bid, which){
+  var h=(DB.config.rateHist[bid]&&DB.config.rateHist[bid][which])||[];
+  return h.slice().sort(function(a,b){return a.from<b.from?1:-1;}).map(function(e){
+    var d=e.from==='2000-01-01'?'inicio':fullDate(e.from);
+    var x=(isAdmin()&&e.from!=='2000-01-01')?' <a onclick="delRate(\''+bid+'\',\''+which+'\',\''+e.from+'\')" style="cursor:pointer;color:#b23a3a;font-weight:700">✕</a>':'';
+    return '<span class="ratepill">desde '+d+': Bs '+trim(e.v)+x+'</span>';
+  }).join(' ');
+}
 function levelOptionsHTML(sel){
   return [['admin','Administrador'],['editor','Editor'],['rrhh','RRHH (horarios)'],['lector','Lector']].map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>'; }).join('');
 }
