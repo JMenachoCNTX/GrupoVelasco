@@ -103,6 +103,7 @@
   .raterow .rl{width:52px; font-size:12.5px; font-weight:700; color:var(--ink2)}
   .raterow .rl2{font-size:12px; color:var(--muted)}
   .ratepill{display:inline-block; background:var(--chip); border-radius:14px; padding:3px 9px; font-size:11.5px; margin:3px 3px 0 0}
+  .ratebadge{background:#eef4f1; color:var(--accent2); border-radius:10px; padding:8px 11px; font-size:12.5px; margin-bottom:10px}
 
   /* ---------- TABS ---------- */
   nav.tabs{position:fixed; bottom:0; left:0; right:0; z-index:25;
@@ -511,7 +512,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v29';
+var APP_VERSION = 'v30';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -651,6 +652,20 @@ function migrateUsers(){
     if(u.cargo==null) u.cargo='';
   });
   try{ ensureRateHist(); }catch(e){}
+  try{ migrateWeeks(); }catch(e){}
+}
+function migrateWeeks(){
+  if(!DB || !DB.weeks) return;
+  Object.keys(DB.weeks).forEach(function(wk){
+    var w=DB.weeks[wk]; if(!w) return;
+    Object.keys(w).forEach(function(id){ if(w[id] && !w[id]._wk) w[id]._wk=wk; });
+  });
+}
+function entryRates(e, bid){
+  var wk=e && e._wk;
+  if(wk) return {r:rateAt(bid,wk,'r'), re:rateAt(bid,wk,'re')};
+  var rc=DB.config.rates[bid]||{r:15,re:15};
+  return {r:(e&&e.r!=null?e.r:rc.r), re:(e&&e.re!=null?e.re:rc.re)};
 }
 function loadLocal(){
   try{ var raw=localStorage.getItem(LS_KEY); if(raw){ DB=JSON.parse(raw); migrateUsers(); return; } }catch(e){}
@@ -770,14 +785,13 @@ function getEntry(wk, empId, create){
   if(!DB.weeks[wk][empId]){
     if(!create) return {d:[{},{},{},{},{},{},{}], p:[], r:null, re:null, _ghost:true};
     var bid=DB.employees[empId].branch;
-    DB.weeks[wk][empId]={ d:[{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0}], p:[], r:rateAt(bid,wk,'r'), re:rateAt(bid,wk,'re') };
+    DB.weeks[wk][empId]={ _wk:wk, d:[{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0},{h:0,e:0,x:0}], p:[], r:rateAt(bid,wk,'r'), re:rateAt(bid,wk,'re') };
   }
   return DB.weeks[wk][empId];
 }
 function calc(entry, branch){
-  var rates=DB.config.rates[branch]||{r:15,re:15};
-  var r = entry.r!=null?entry.r:rates.r;
-  var re = entry.re!=null?entry.re:rates.re;
+  var rr=entryRates(entry, branch);
+  var r = rr.r, re = rr.re;
   var hrs=0,ext=0,desc=0,dayPay=0;
   (entry.d||[]).forEach(function(c){ hrs+=num(c.h); ext+=num(c.e); desc+=num(c.x); dayPay+=num(c.pm); });
   var impH=hrs*r, impE=ext*re;
@@ -887,17 +901,19 @@ function empBodyHTML(id, entry, c, wk){
   var ent=getEntry(wk,id,false);
   var r=c.r, re=c.re, admin=isAdmin(), editor=canEdit(), roleRO=!editor;
   var weekPaid = c.estado==='PAGADO';
-  var h='<div class="drow head"><span></span><span>Horas</span><span>Extras</span><span>Desc. Bs</span><span>Total</span></div>';
+  var h='<div class="ratebadge">💲 Tarifa esta semana: <b>Normal Bs '+trim(r)+'/h</b> · <b>Extra Bs '+trim(re)+'/h</b></div>';
+  h+='<div class="drow head"><span></span><span>Horas</span><span>Extras</span><span>Desc. Bs</span><span>Total</span></div>';
   for(var i=0;i<7;i++){
     var cell=ent.d[i]||{};
     var dh=num(cell.h), de=num(cell.e), dx=num(cell.x);
     var dtot=dh*r+de*re-dx;
     var date=addDays(curMonday,i);
-    var dpaid=num(cell.pm)>0 && cell.pf;
+    var dgi=dtot;
+    var full = num(cell.pm)>0 && cell.pf && num(cell.pm)>=dgi-0.009 && dgi>0.009;
     var libre = dh===0&&de===0&&dx===0;
-    var dis = (roleRO || (!admin && dpaid)) ? ' disabled' : '';
+    var dis = (roleRO || (!admin && full)) ? ' disabled' : '';
     h+='<div class="drow'+(libre?' libre':'')+'">';
-    h+='<div class="day">'+DAYS[i]+'<small>'+date.getDate()+'/'+(date.getMonth()+1)+(dpaid?' ✓':'')+'</small></div>';
+    h+='<div class="day">'+DAYS[i]+'<small>'+date.getDate()+'/'+(date.getMonth()+1)+(full?' ✓':'')+'</small></div>';
     h+='<input class="cellin mono" inputmode="decimal"'+dis+' value="'+(dh?trim(dh):'')+'" placeholder="0" oninput="setCell(\''+id+'\','+i+',\'h\',this.value)">';
     h+='<input class="cellin mono" inputmode="decimal"'+dis+' value="'+(de?trim(de):'')+'" placeholder="0" oninput="setCell(\''+id+'\','+i+',\'e\',this.value)">';
     h+='<input class="cellin mono" inputmode="decimal"'+dis+' value="'+(dx?trim(dx):'')+'" placeholder="0" oninput="setCell(\''+id+'\','+i+',\'x\',this.value)">';
@@ -926,23 +942,27 @@ function empBodyHTML(id, entry, c, wk){
     var cell=ent.d[i]||{};
     var dh=num(cell.h), de=num(cell.e), dx=num(cell.x);
     var dg=dh*r+de*re-dx;
-    var hasPay=num(cell.pm)>0;
-    if(dg<=0.009 && !hasPay) continue;
+    var paid=num(cell.pm);
+    if(dg<=0.009 && !(paid>0)) continue;
     anyWorked=true;
+    var rem=dg-paid;
     var date=addDays(curMonday,i);
-    var dpaid=hasPay && cell.pf;
-    h+='<div class="pday"><div class="day">'+DAYS[i]+' '+date.getDate()+'/'+(date.getMonth()+1)+' · Gana '+bs(dg)+'</div><div class="ctrls">';
-    if(dpaid){
-      h+='<span class="paidchip">✓ Pagado '+fmtDate(cell.pf)+' · '+bs(cell.pm)+'</span>';
+    var full = paid>0 && cell.pf && rem<=0.009;
+    var partial = paid>0 && rem>0.009;
+    h+='<div class="pday"><div class="day">'+DAYS[i]+' '+date.getDate()+'/'+(date.getMonth()+1)+' · Gana '+bs(dg)+(partial?' · <span style="color:var(--amber)">falta '+bs(rem)+'</span>':'')+'</div><div class="ctrls">';
+    if(full){
+      h+='<span class="paidchip">✓ Pagado '+fmtDate(cell.pf)+' · '+bs(paid)+'</span>';
       h+='<button class="mini" onclick="printDayReceipt(\''+id+'\','+i+')">🧾 Recibo</button>';
       if(admin) h+='<button class="mini" onclick="unpayDay(\''+id+'\','+i+')">Quitar</button>';
     } else if(!roleRO){
       anyUnpaid=true;
-      h+='<input class="fld mono paym" id="pm_'+id+'_'+i+'" inputmode="decimal" placeholder="Importe" value="'+(dg?trim(dg):'')+'">';
+      if(partial) h+='<span class="paidchip" style="background:#fdf0d8;color:var(--amber)">Pagado '+bs(paid)+'</span>';
+      h+='<input class="fld mono paym" id="pm_'+id+'_'+i+'" inputmode="decimal" placeholder="Importe" value="'+(rem>0.009?trim(rem):'')+'">';
       h+='<input class="fld payf" type="date" id="pf_'+id+'_'+i+'" value="'+today()+'">';
-      h+='<button class="mini acc" onclick="payDay(\''+id+'\','+i+')">Pagar</button>';
+      h+='<button class="mini acc" onclick="payDay(\''+id+'\','+i+')">'+(partial?'Pagar diferencia':'Pagar')+'</button>';
+      if(admin && partial) h+='<button class="mini" onclick="unpayDay(\''+id+'\','+i+')">Quitar</button>';
     } else {
-      h+='<span class="tag">Pendiente</span>';
+      h+='<span class="tag">'+(partial?'Parcial':'Pendiente')+'</span>';
     }
     h+='</div></div>';
   }
@@ -959,19 +979,20 @@ function empBodyHTML(id, entry, c, wk){
   h+='</div>';
   return h;
 }
-function dayPaidCell(cell){ return num(cell.pm)>0 && !!cell.pf; }
-function canEditDay(id,i){ if(isAdmin()) return true; if(!canEdit()) return false; var e=getEntry(weekKey(curMonday),id,false); return !dayPaidCell(e.d[i]||{}); }
+function dayGanadoOf(id,i){ var e=getEntry(weekKey(curMonday),id,false); var c=e.d[i]||{}; var rr=entryRates(e,empBranch(id)); return num(c.h)*rr.r+num(c.e)*rr.re-num(c.x); }
+function dayFullyPaid(id,i){ var e=getEntry(weekKey(curMonday),id,false); var c=e.d[i]||{}; if(!(num(c.pm)>0 && c.pf)) return false; return num(c.pm) >= dayGanadoOf(id,i)-0.009 && dayGanadoOf(id,i)>0.009; }
+function canEditDay(id,i){ if(isAdmin()) return true; if(!canEdit()) return false; return !dayFullyPaid(id,i); }
 function payDay(id,i){
   if(!canEdit() && !isAdmin()) return;
-  var e0=getEntry(weekKey(curMonday),id,false);
-  if(!isAdmin() && dayPaidCell(e0.d[i]||{})) return;
+  if(!isAdmin() && dayFullyPaid(id,i)) return;
   var mEl=document.getElementById('pm_'+id+'_'+i), fEl=document.getElementById('pf_'+id+'_'+i);
   if(!mEl||!fEl) return;
   var f=fEl.value, m=num(mEl.value);
   if(!f){ toast('Coloca la fecha de pago'); return; }
   if(m<=0){ toast('Coloca el importe'); return; }
   var e=getEntry(weekKey(curMonday),id,true);
-  e.d[i].pm=m; e.d[i].pf=f;
+  e.d[i].pm = num(e.d[i].pm) + m;   // acumula (permite pagar la diferencia)
+  e.d[i].pf = f;
   saveLocal(); rerenderCardBody(id); refreshCard(id); refreshStrip(); toast('Pago registrado');
 }
 function unpayDay(id,i){
@@ -985,11 +1006,10 @@ function payAllDays(id){
   var fEl=document.getElementById('payallf_'+id); if(!fEl) return;
   var f=fEl.value; if(!f){ toast('Coloca la fecha de pago'); return; }
   var e=getEntry(weekKey(curMonday),id,true);
-  var rates=DB.config.rates[empBranch(id)]||{r:15,re:15};
-  var r=(e.r!=null?e.r:rates.r), re=(e.re!=null?e.re:rates.re), n=0;
-  for(var i=0;i<7;i++){ var c=e.d[i]||{h:0,e:0,x:0}; var dg=num(c.h)*r+num(c.e)*re-num(c.x); if(dg>0.009 && !(num(c.pm)>0&&c.pf)){ e.d[i]=c; c.pm=dg; c.pf=f; n++; } }
+  var rr=entryRates(e,empBranch(id)), r=rr.r, re=rr.re, n=0;
+  for(var i=0;i<7;i++){ var c=e.d[i]||{h:0,e:0,x:0}; var dg=num(c.h)*r+num(c.e)*re-num(c.x); var rem=dg-num(c.pm); if(rem>0.009){ e.d[i]=c; c.pm=num(c.pm)+rem; c.pf=f; n++; } }
   if(!n){ toast('No hay días pendientes'); return; }
-  saveLocal(); rerenderCardBody(id); refreshCard(id); refreshStrip(); toast(n+' día(s) pagado(s)');
+  saveLocal(); rerenderCardBody(id); refreshCard(id); refreshStrip(); toast(n+' día(s) al día'); 
 }
 function trim(n){ return (Math.round(n*100)/100).toString().replace('.',','); }
 function fmtDate(s){ if(!s) return ''; var d=parseISO(s); return pad(d.getDate())+'/'+pad(d.getMonth()+1); }
@@ -1270,7 +1290,7 @@ function dayData(date){
     allEmps(bid).forEach(function(id){
       var e=DB.weeks[wk]&&DB.weeks[wk][id]; if(!e) return;
       var cell=(e.d||[])[dayIdx]||{}; var hh=num(cell.h),ex=num(cell.e),dx=num(cell.x);
-      var rates=DB.config.rates[bid]||{r:15,re:15}; var r=e.r!=null?e.r:rates.r, re=e.re!=null?e.re:rates.re;
+      var rr=entryRates(e,bid), r=rr.r, re=rr.re;
       if(hh||ex||dx){ var imp=hh*r+ex*re-dx; worked.push({b:bid,name:DB.employees[id].name,h:hh,ex:ex,imp:imp}); totH+=hh; totImp+=imp; }
     });
   });
@@ -1485,7 +1505,7 @@ function fullDate(iso){ if(!iso) return '—'; var d=parseISO(iso); return pad(d
 function receiptDiv(id, i){
   var wk=weekKey(curMonday), e=getEntry(wk,id,false), cell=(e.d||[])[i]||{};
   var bid=empBranch(id), rates=DB.config.rates[bid]||{r:15,re:15};
-  var r=e.r!=null?e.r:rates.r, re=e.re!=null?e.re:rates.re;
+  var rr=entryRates(e,bid), r=rr.r, re=rr.re;
   var dh=num(cell.h), de=num(cell.e), dx=num(cell.x), imp=dh*r+de*re-dx;
   var date=addDays(curMonday,i);
   var blogo = LOGOS[bid] ? '<img class="rblogo" src="'+LOGOS[bid]+'">' : '';
@@ -1690,7 +1710,7 @@ function computeReportWeek(wk,branches){
       bt[bid].horas+=c.hrs; bt[bid].ganado+=c.ganado; bt[bid].pagado+=c.pagado; bt[bid].pendiente+=Math.max(0,c.saldo);
       empAgg[id]=empAgg[id]||{name:DB.employees[id].name,branch:bid,horas:0}; empAgg[id].horas+=c.hrs;
       var rates=DB.config.rates[bid]||{r:15,re:15};
-      var r=(e.r!=null?e.r:rates.r), re=(e.re!=null?e.re:rates.re);
+      var rr=entryRates(e,bid), r=rr.r, re=rr.re;
       (e.d||[]).forEach(function(cell,i){
         dayG[i]+= num(cell.h)*r + num(cell.e)*re - num(cell.x);
         dayP[i]+= num(cell.pm);
