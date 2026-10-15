@@ -95,6 +95,11 @@
   .staffitem{display:flex; gap:8px; align-items:center; background:#fbfaf6; border:1px solid var(--line); border-radius:11px; padding:8px 9px}
   .staffitem .fld{flex:1; min-width:0}
   .setpills{display:flex; gap:7px; overflow-x:auto; padding:2px 0 12px; -webkit-overflow-scrolling:touch}
+  .arqgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+  .arqgrid label{display:block; font-size:11px; color:var(--muted); font-weight:700; margin-bottom:3px}
+  .arqin th{font-size:10px; color:var(--muted)}
+  .arqin .fld{padding:7px 8px}
+  @media(max-width:620px){ .arqgrid{grid-template-columns:repeat(2,1fr)} }
   .setpills button{flex:0 0 auto; border:1px solid var(--line); background:var(--card); border-radius:20px; padding:8px 15px; font-size:13px; font-weight:600; color:var(--ink2); white-space:nowrap}
   .setpills button.on{background:#1f4e8c; color:#fff; border-color:#1f4e8c}
   .ratecard{border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px}
@@ -490,8 +495,11 @@
     <!-- ARQUEOS (solo admin) -->
     <section id="scrArq" class="scr">
       <div class="panel">
-        <h3>🧾 Arqueos — GrupoVelasco</h3>
-        <div class="note" style="margin-bottom:8px">Historial de cierres de caja (desde 2026). Elige la sucursal y el mes.</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <h3 style="margin:0">🧾 Arqueos — GrupoVelasco</h3>
+          <button class="mini acc" style="margin-left:auto" onclick="newArqueo()">➕ Nuevo arqueo</button>
+        </div>
+        <div class="note" id="arqHelp" style="margin:8px 0 0">Historial de cierres de caja (desde 2026). Elige la sucursal y el mes.</div>
         <div class="setpills" id="arqSucPills"></div>
         <div class="setpills" id="arqMesPills"></div>
       </div>
@@ -549,7 +557,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v33';
+var APP_VERSION = 'v34';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -2392,6 +2400,16 @@ function setArqSuc(s){ arqSuc=s; arqYM=null; arqSel=null; renderArqueos(); }
 function setArqMes(ym){ arqYM=ym; arqSel=null; renderArqueos(); }
 async function renderArqueos(){
   if(!document.getElementById('arqBody')) return;
+  if(arqMode==='new'){
+    document.getElementById('arqSucPills').innerHTML='';
+    document.getElementById('arqMesPills').innerHTML='';
+    document.getElementById('arqStrip').innerHTML='';
+    var hh=document.getElementById('arqHelp'); if(hh) hh.style.display='none';
+    document.getElementById('arqBody').innerHTML=arqFormHTML();
+    recalcArq();
+    return;
+  }
+  var hs=document.getElementById('arqHelp'); if(hs) hs.style.display='';
   if(!arqSuc) arqSuc=GV_SUC[0].id;
   document.getElementById('arqSucPills').innerHTML = GV_SUC.map(function(s){
     return '<button class="'+(s.id===arqSuc?'on':'')+'" onclick="setArqSuc(\''+s.id+'\')">'+s.name+'</button>'; }).join('');
@@ -2467,6 +2485,119 @@ function toggleArqOrders(id){
   });
   h+='</tbody></table></div>';
   el.innerHTML=h; el.style.display='block';
+}
+
+/* ---- Captura de nuevo arqueo (v34) ---- */
+var GV_MARCAS=['Memphis','SushiFlash','Noah\'s'];
+var GV_CANALES_OPT=[['peya_efe','PeYa Efectivo'],['peya_onl','PeYa Online'],['peya_vou','Voucher'],['peya_promo','Dscto Promo'],['peya_otros','Otros Dsctos'],['yango','Yango'],['loc_efe','Local Efectivo'],['loc_pos','POS'],['loc_qr','QR']];
+var arqMode='list', draft=null;
+function avval(id){ var e=document.getElementById(id); return e?e.value:''; }
+async function newArqueo(){
+  arqMode='new';
+  var suc=(arqSuc && arqSuc!=='cine')?arqSuc:'equipetrol_mp';
+  var nro='';
+  try{ var cache=await loadArqSuc(suc); var mx=0; cache.forEach(function(a){var n=parseInt(a.nro)||0;if(n>mx)mx=n;}); nro=mx?String(mx+1):''; }catch(e){}
+  var t=new Date(), fecha=t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate());
+  draft={suc:suc,fecha:fecha,nro:nro,cajero:'',turnoIni:'',turnoFin:'',ordenes:[{m:'Memphis',c:'loc_efe',v:'',n:''}],gastos:[],comentarios:''};
+  renderArqueos();
+}
+function ordRowHTML(o,i){
+  var mk=GV_MARCAS.map(function(m){return '<option'+(m===o.m?' selected':'')+'>'+m+'</option>';}).join('');
+  var cn=GV_CANALES_OPT.map(function(c){return '<option value="'+c[0]+'"'+(c[0]===o.c?' selected':'')+'>'+c[1]+'</option>';}).join('');
+  return '<tr><td><select class="fld" id="om_'+i+'">'+mk+'</select></td><td><select class="fld" id="oc_'+i+'">'+cn+'</select></td>'+
+    '<td><input class="fld mono" id="ov_'+i+'" inputmode="decimal" value="'+(o.v||'')+'" onchange="recalcArq()" style="width:92px"></td>'+
+    '<td><input class="fld" id="on_'+i+'" value="'+esc(o.n||'')+'"></td>'+
+    '<td><button class="del" onclick="delOrden('+i+')">✕</button></td></tr>';
+}
+function gasRowHTML(g,i){
+  return '<tr><td><input class="fld" id="gg_'+i+'" value="'+esc(g.g||'')+'" placeholder="Descripción"></td>'+
+    '<td><input class="fld mono" id="gt_'+i+'" inputmode="decimal" value="'+(g.t||'')+'" onchange="recalcArq()" style="width:92px"></td>'+
+    '<td><input class="fld" id="gtipo_'+i+'" value="'+esc(g.tipo||'')+'" placeholder="Tipo"></td>'+
+    '<td><input class="fld" id="gdoc_'+i+'" value="'+esc(g.doc||'')+'" placeholder="Recibo/Factura"></td>'+
+    '<td><input class="fld" id="gdn_'+i+'" value="'+esc(g.docnro||'')+'" placeholder="Nro" style="width:80px"></td>'+
+    '<td><button class="del" onclick="delGasto('+i+')">✕</button></td></tr>';
+}
+function arqFormHTML(){
+  var d=draft;
+  var sucOpts=GV_SUC.filter(function(s){return s.id!=='cine';}).map(function(s){return '<option value="'+s.id+'"'+(s.id===d.suc?' selected':'')+'>'+s.name+'</option>';}).join('');
+  var h='<div class="panel"><h3>➕ Nuevo arqueo</h3>';
+  h+='<div class="arqgrid">';
+  h+='<div><label>Sucursal</label><select class="fld" id="dSuc" onchange="onDraftSuc()">'+sucOpts+'</select></div>';
+  h+='<div><label>Fecha</label><input class="fld" type="date" id="dFecha" value="'+d.fecha+'"></div>';
+  h+='<div><label>Nro de arqueo</label><input class="fld mono" id="dNro" value="'+esc(d.nro)+'"></div>';
+  h+='<div><label>Cajero</label><input class="fld" id="dCajero" value="'+esc(d.cajero)+'" placeholder="Nombre"></div>';
+  h+='<div><label>Turno inicio</label><input class="fld" id="dTurnoIni" value="'+esc(d.turnoIni)+'" placeholder="11:00"></div>';
+  h+='<div><label>Turno fin</label><input class="fld" id="dTurnoFin" value="'+esc(d.turnoFin)+'" placeholder="22:00"></div>';
+  h+='</div>';
+  h+='<div class="divider"></div><div class="note" style="font-weight:700;margin:6px 0">🧾 Comandas / órdenes</div>';
+  h+='<div style="overflow-x:auto"><table class="tbl arqin"><thead><tr><th>Marca</th><th>Canal</th><th>Monto</th><th>Comentario</th><th></th></tr></thead><tbody id="ordRows">';
+  d.ordenes.forEach(function(o,i){ h+=ordRowHTML(o,i); });
+  h+='</tbody></table></div><div style="margin-top:6px"><button class="mini acc" onclick="addOrden()">➕ Agregar comanda</button></div>';
+  h+='<div class="divider"></div><div class="note" style="font-weight:700;margin:6px 0">💸 Gastos / egresos</div>';
+  h+='<div style="overflow-x:auto"><table class="tbl arqin"><thead><tr><th>Gasto</th><th>Monto</th><th>Tipo</th><th>Recibo/Factura</th><th>Nro</th><th></th></tr></thead><tbody id="gasRows">';
+  d.gastos.forEach(function(g,i){ h+=gasRowHTML(g,i); });
+  h+='</tbody></table></div><div style="margin-top:6px"><button class="mini acc" onclick="addGasto()">➕ Agregar gasto</button></div>';
+  h+='<div class="divider"></div><div><label>Comentarios del día</label><textarea class="fld" id="dComent" rows="2">'+esc(d.comentarios)+'</textarea></div>';
+  h+='<div id="arqTotals" class="strip" style="margin-top:12px"></div>';
+  h+='<div class="payactions" style="margin-top:12px"><button class="mini acc" onclick="saveArqueo()">💾 Guardar arqueo</button><button class="mini" onclick="cancelArqueo()">Cancelar</button></div>';
+  h+='</div>';
+  return h;
+}
+function readDraft(){
+  if(!draft) return;
+  draft.suc=avval('dSuc'); draft.fecha=avval('dFecha'); draft.nro=avval('dNro').trim(); draft.cajero=avval('dCajero').trim();
+  draft.turnoIni=avval('dTurnoIni').trim(); draft.turnoFin=avval('dTurnoFin').trim(); draft.comentarios=avval('dComent');
+  var os=[]; for(var i=0;i<draft.ordenes.length;i++){ if(!document.getElementById('om_'+i)) continue; os.push({m:avval('om_'+i),c:avval('oc_'+i),v:num(avval('ov_'+i)),n:avval('on_'+i).trim()}); } draft.ordenes=os;
+  var gs=[]; for(var j=0;j<draft.gastos.length;j++){ if(!document.getElementById('gg_'+j)) continue; gs.push({g:avval('gg_'+j).trim(),t:num(avval('gt_'+j)),tipo:avval('gtipo_'+j).trim(),doc:avval('gdoc_'+j).trim(),docnro:avval('gdn_'+j).trim()}); } draft.gastos=gs;
+}
+function rerenderArqForm(){ document.getElementById('arqBody').innerHTML=arqFormHTML(); recalcArq(); }
+function addOrden(){ readDraft(); draft.ordenes.push({m:'Memphis',c:'loc_efe',v:'',n:''}); rerenderArqForm(); }
+function delOrden(i){ readDraft(); draft.ordenes.splice(i,1); if(!draft.ordenes.length) draft.ordenes.push({m:'Memphis',c:'loc_efe',v:'',n:''}); rerenderArqForm(); }
+function addGasto(){ readDraft(); draft.gastos.push({g:'',t:'',tipo:'',doc:'',docnro:''}); rerenderArqForm(); }
+function delGasto(i){ readDraft(); draft.gastos.splice(i,1); rerenderArqForm(); }
+async function onDraftSuc(){ readDraft(); try{ var cache=await loadArqSuc(draft.suc); var mx=0; cache.forEach(function(a){var n=parseInt(a.nro)||0;if(n>mx)mx=n;}); draft.nro=mx?String(mx+1):draft.nro; }catch(e){} rerenderArqForm(); }
+function computeArqTotals(d){
+  var map={peya_efe:'tEfectivoPeya',peya_onl:'tOnlinePeya',peya_vou:'tVouchers',peya_promo:'tDsctoPromo',peya_otros:'tOtrosDsctos',yango:'yango',loc_efe:'tEfectivoLocal',loc_pos:'tTarjetaLocal',loc_qr:'tTransfQR'};
+  var t={tEfectivoPeya:0,tOnlinePeya:0,tVouchers:0,tDsctoPromo:0,tOtrosDsctos:0,yango:0,tEfectivoLocal:0,tTarjetaLocal:0,tTransfQR:0};
+  d.ordenes.forEach(function(o){ var f=map[o.c]; if(f) t[f]+=num(o.v); });
+  var ventasPeya=t.tEfectivoPeya+t.tOnlinePeya, ventasLocal=t.tEfectivoLocal+t.tTarjetaLocal+t.tTransfQR, ventasYango=t.yango;
+  var totalGastos=d.gastos.reduce(function(s,g){return s+num(g.t);},0);
+  return {t:t,ventasPeya:ventasPeya,ventasLocal:ventasLocal,ventasYango:ventasYango,ventasExcel:ventasPeya+ventasLocal+ventasYango,totalGastos:totalGastos};
+}
+function recalcArq(){
+  if(!draft) return; readDraft();
+  var c=computeArqTotals(draft), host=document.getElementById('arqTotals'); if(!host) return;
+  var nord=draft.ordenes.filter(function(o){return num(o.v)>0;}).length;
+  host.innerHTML=statHTML('Ventas',bs(c.ventasExcel),'g')+statHTML('Gastos',bs(c.totalGastos),'p')+statHTML('Comandas',nord,'s');
+}
+function cancelArqueo(){ arqMode='list'; draft=null; renderArqueos(); }
+async function saveArqueo(){
+  readDraft();
+  if(!draft.suc){ toast('Elige la sucursal'); return; }
+  if(!draft.fecha){ toast('Coloca la fecha'); return; }
+  if(!draft.nro){ toast('Coloca el número de arqueo'); return; }
+  if(!draft.cajero){ toast('Coloca el cajero'); return; }
+  if(!draft.ordenes.some(function(o){return num(o.v)>0;})){ toast('Agrega al menos una comanda con monto'); return; }
+  var c=computeArqTotals(draft), id=draft.suc+'_'+draft.nro;
+  try{ var cache=await loadArqSuc(draft.suc); if(cache.some(function(a){return a.id===id;})){ if(!confirm('Ya existe un arqueo Nro '+draft.nro+' en esta sucursal. ¿Sobrescribir?')) return; } }catch(e){}
+  var doc={ id:id, nro:draft.nro, suc:draft.suc, fecha:draft.fecha, cajero:draft.cajero,
+    turno:(draft.turnoIni&&draft.turnoFin?draft.turnoIni+'-'+draft.turnoFin:(draft.turnoIni||draft.turnoFin||'')),
+    ventasExcel:c.ventasExcel, ventasGerente:0, ventasPeya:c.ventasPeya, ventasLocal:c.ventasLocal, ventasYango:c.ventasYango,
+    tEfectivoPeya:c.t.tEfectivoPeya, tOnlinePeya:c.t.tOnlinePeya, tVouchers:c.t.tVouchers, tDsctoPromo:c.t.tDsctoPromo, tOtrosDsctos:c.t.tOtrosDsctos,
+    tEfectivoLocal:c.t.tEfectivoLocal, tTarjetaLocal:c.t.tTarjetaLocal, tTransfQR:c.t.tTransfQR,
+    totalGastos:c.totalGastos, saldo:0, sobre:0, difArqueo:0,
+    comentarios:draft.comentarios||'', mes:(MONTHS[parseInt(draft.fecha.slice(5,7),10)-1]||'').toLowerCase(),
+    ordenes:draft.ordenes.filter(function(o){return num(o.v)>0||o.n;}).map(function(o){ var a={}; if(num(o.v)>0) a[o.c]=num(o.v); var r={m:o.m,a:a}; if(o.n) r.n=o.n; return r; }),
+    gastos:draft.gastos.filter(function(g){return g.g||num(g.t)>0;}).map(function(g){ return {g:g.g,t:num(g.t),tipo:g.tipo,doc:g.doc,docnro:g.docnro}; }),
+    estado:'capturado', creadoEn:Date.now(), creadoPor:(session?session.email:'') };
+  try{
+    var db=await gvReady();
+    await db.collection('gvArqueos').doc(id).set(doc);
+    delete gvCache[draft.suc];
+    toast('Arqueo guardado ✓');
+    arqMode='list'; arqSuc=draft.suc; arqYM=draft.fecha.slice(0,7); arqSel=id; draft=null;
+    renderArqueos();
+  }catch(e){ toast('No se pudo guardar: '+e.message); }
 }
 
 function onBranch(){ curBranch=document.getElementById('branchSel').value; openEmp={}; openSched={}; renderAll(); }
