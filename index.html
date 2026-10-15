@@ -100,6 +100,11 @@
   .arqin th{font-size:10px; color:var(--muted)}
   .arqin .fld{padding:7px 8px}
   @media(max-width:620px){ .arqgrid{grid-template-columns:repeat(2,1fr)} }
+  .conteogrid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:4px}
+  .cndenom{display:flex; align-items:center; gap:6px; background:#fbfaf6; border:1px solid var(--line); border-radius:9px; padding:5px 8px}
+  .cndenom span{font-size:11px; font-weight:700; color:var(--ink2); white-space:nowrap}
+  .cndenom .fld{width:100%; padding:6px}
+  @media(max-width:620px){ .conteogrid{grid-template-columns:repeat(2,1fr)} }
   .setpills button{flex:0 0 auto; border:1px solid var(--line); background:var(--card); border-radius:20px; padding:8px 15px; font-size:13px; font-weight:600; color:var(--ink2); white-space:nowrap}
   .setpills button.on{background:#1f4e8c; color:#fff; border-color:#1f4e8c}
   .ratecard{border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px}
@@ -557,7 +562,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v34';
+var APP_VERSION = 'v35';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -2468,6 +2473,19 @@ function openArq(id){
     a.gastos.forEach(function(x){ h+='<tr><td>'+esc(x.g)+'</td><td>'+esc(x.tipo||'')+'</td><td>'+esc(((x.doc||'')+' '+(x.docnro||'')).trim())+'</td><td class="mono">'+fmt(x.t)+'</td></tr>'; });
     h+='</tbody></table></div>';
   }
+  if(a.conteo){
+    h+='<div class="divider"></div><div class="note" style="font-weight:700;margin:8px 0 4px">💵 Conteo de caja</div>';
+    h+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Denominación</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>';
+    var tc=0;
+    GV_DENOMS.forEach(function(dn){ var cnt=num(a.conteo[dn[0]]); if(cnt){ var st=dn[1]*cnt; tc+=st; h+='<tr><td>'+dn[2]+'</td><td class="mono">'+cnt+'</td><td class="mono">'+fmt(st)+'</td></tr>'; } });
+    h+='<tr class="tot"><td>Total contado</td><td></td><td class="mono">'+fmt(tc)+'</td></tr>';
+    if(a.conteo.cajaChica) h+='<tr><td>(−) Inicio caja chica</td><td></td><td class="mono">'+fmt(a.conteo.cajaChica)+'</td></tr>';
+    h+='</tbody></table></div>';
+    var est=Math.abs(num(a.difArqueo))<0.01?'CUADRADO':(num(a.difArqueo)>0?'SOBRANTE':'FALTANTE');
+    var col=est==='CUADRADO'?'var(--accent)':(est==='SOBRANTE'?'var(--amber)':'var(--red)');
+    h+='<div class="strip" style="margin-top:8px">'+statHTML('Efectivo esperado',bs(a.saldo),'g')+statHTML('En sobre',bs(a.sobre),'p')+statHTML('Diferencia',bs(a.difArqueo),'s')+'</div>';
+    h+='<div class="note" style="margin-top:6px;font-weight:800;color:'+col+'">'+est+'</div>';
+  }
   if(a.comentarios){ h+='<div class="note" style="margin-top:10px;background:var(--chip);border-radius:10px;padding:9px 11px"><b>Comentarios:</b> '+esc(a.comentarios)+'</div>'; }
   h+='</div>';
   host.innerHTML=h;
@@ -2490,6 +2508,7 @@ function toggleArqOrders(id){
 /* ---- Captura de nuevo arqueo (v34) ---- */
 var GV_MARCAS=['Memphis','SushiFlash','Noah\'s'];
 var GV_CANALES_OPT=[['peya_efe','PeYa Efectivo'],['peya_onl','PeYa Online'],['peya_vou','Voucher'],['peya_promo','Dscto Promo'],['peya_otros','Otros Dsctos'],['yango','Yango'],['loc_efe','Local Efectivo'],['loc_pos','POS'],['loc_qr','QR']];
+var GV_DENOMS=[['d200',200,'Bs 200'],['d100',100,'Bs 100'],['d50',50,'Bs 50'],['d20',20,'Bs 20'],['d10',10,'Bs 10'],['d5',5,'Bs 5'],['d2',2,'Bs 2'],['d1',1,'Bs 1'],['d050',0.5,'Bs 0,50'],['d020',0.2,'Bs 0,20'],['d010',0.1,'Bs 0,10']];
 var arqMode='list', draft=null;
 function avval(id){ var e=document.getElementById(id); return e?e.value:''; }
 async function newArqueo(){
@@ -2498,7 +2517,7 @@ async function newArqueo(){
   var nro='';
   try{ var cache=await loadArqSuc(suc); var mx=0; cache.forEach(function(a){var n=parseInt(a.nro)||0;if(n>mx)mx=n;}); nro=mx?String(mx+1):''; }catch(e){}
   var t=new Date(), fecha=t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate());
-  draft={suc:suc,fecha:fecha,nro:nro,cajero:'',turnoIni:'',turnoFin:'',ordenes:[{m:'Memphis',c:'loc_efe',v:'',n:''}],gastos:[],comentarios:''};
+  draft={suc:suc,fecha:fecha,nro:nro,cajero:'',turnoIni:'',turnoFin:'',ordenes:[{m:'Memphis',c:'loc_efe',v:'',n:''}],gastos:[],comentarios:'',ventasGerente:'',cajaChica:'',conteo:{}};
   renderArqueos();
 }
 function ordRowHTML(o,i){
@@ -2537,6 +2556,14 @@ function arqFormHTML(){
   h+='<div style="overflow-x:auto"><table class="tbl arqin"><thead><tr><th>Gasto</th><th>Monto</th><th>Tipo</th><th>Recibo/Factura</th><th>Nro</th><th></th></tr></thead><tbody id="gasRows">';
   d.gastos.forEach(function(g,i){ h+=gasRowHTML(g,i); });
   h+='</tbody></table></div><div style="margin-top:6px"><button class="mini acc" onclick="addGasto()">➕ Agregar gasto</button></div>';
+  // conteo de caja y cuadre
+  h+='<div class="divider"></div><div class="note" style="font-weight:700;margin:6px 0">💵 Conteo de caja y cuadre</div>';
+  h+='<div class="arqgrid"><div><label>Inicio caja chica</label><input class="fld mono" id="cCaja" inputmode="decimal" value="'+(d.cajaChica||'')+'" onchange="recalcArq()"></div>';
+  h+='<div><label>Ventas Control Facilito</label><input class="fld mono" id="cFacil" inputmode="decimal" value="'+(d.ventasGerente||'')+'" onchange="recalcArq()"></div></div>';
+  h+='<div class="conteogrid">';
+  GV_DENOMS.forEach(function(dn){ var q=(d.conteo&&d.conteo[dn[0]])||''; h+='<div class="cndenom"><span>'+dn[2]+'</span><input class="fld mono" id="cn_'+dn[0]+'" inputmode="numeric" value="'+q+'" placeholder="0" onchange="recalcArq()"></div>'; });
+  h+='</div>';
+  h+='<div id="arqCuadre" style="margin-top:10px"></div>';
   h+='<div class="divider"></div><div><label>Comentarios del día</label><textarea class="fld" id="dComent" rows="2">'+esc(d.comentarios)+'</textarea></div>';
   h+='<div id="arqTotals" class="strip" style="margin-top:12px"></div>';
   h+='<div class="payactions" style="margin-top:12px"><button class="mini acc" onclick="saveArqueo()">💾 Guardar arqueo</button><button class="mini" onclick="cancelArqueo()">Cancelar</button></div>';
@@ -2547,6 +2574,8 @@ function readDraft(){
   if(!draft) return;
   draft.suc=avval('dSuc'); draft.fecha=avval('dFecha'); draft.nro=avval('dNro').trim(); draft.cajero=avval('dCajero').trim();
   draft.turnoIni=avval('dTurnoIni').trim(); draft.turnoFin=avval('dTurnoFin').trim(); draft.comentarios=avval('dComent');
+  draft.ventasGerente=num(avval('cFacil')); draft.cajaChica=num(avval('cCaja'));
+  draft.conteo=draft.conteo||{}; GV_DENOMS.forEach(function(dn){ if(document.getElementById('cn_'+dn[0])){ var q=num(avval('cn_'+dn[0])); if(q) draft.conteo[dn[0]]=q; else delete draft.conteo[dn[0]]; } });
   var os=[]; for(var i=0;i<draft.ordenes.length;i++){ if(!document.getElementById('om_'+i)) continue; os.push({m:avval('om_'+i),c:avval('oc_'+i),v:num(avval('ov_'+i)),n:avval('on_'+i).trim()}); } draft.ordenes=os;
   var gs=[]; for(var j=0;j<draft.gastos.length;j++){ if(!document.getElementById('gg_'+j)) continue; gs.push({g:avval('gg_'+j).trim(),t:num(avval('gt_'+j)),tipo:avval('gtipo_'+j).trim(),doc:avval('gdoc_'+j).trim(),docnro:avval('gdn_'+j).trim()}); } draft.gastos=gs;
 }
@@ -2564,11 +2593,26 @@ function computeArqTotals(d){
   var totalGastos=d.gastos.reduce(function(s,g){return s+num(g.t);},0);
   return {t:t,ventasPeya:ventasPeya,ventasLocal:ventasLocal,ventasYango:ventasYango,ventasExcel:ventasPeya+ventasLocal+ventasYango,totalGastos:totalGastos};
 }
+function conteoTotal(conteo){ var t=0; GV_DENOMS.forEach(function(dn){ t+=dn[1]*(num((conteo||{})[dn[0]])); }); return Math.round(t*100)/100; }
+function computeCuadre(d,c){
+  var totalContado=conteoTotal(d.conteo);
+  var sobre=Math.round((totalContado-num(d.cajaChica))*100)/100;
+  var saldo=Math.round((c.t.tEfectivoLocal+c.t.tEfectivoPeya-c.totalGastos)*100)/100;  // efectivo esperado en caja
+  var dif=Math.round((sobre-saldo)*100)/100;
+  var estado=Math.abs(dif)<0.01?'CUADRADO':(dif>0?'SOBRANTE':'FALTANTE');
+  return {totalContado:totalContado,sobre:sobre,saldo:saldo,dif:dif,estado:estado};
+}
 function recalcArq(){
   if(!draft) return; readDraft();
   var c=computeArqTotals(draft), host=document.getElementById('arqTotals'); if(!host) return;
   var nord=draft.ordenes.filter(function(o){return num(o.v)>0;}).length;
   host.innerHTML=statHTML('Ventas',bs(c.ventasExcel),'g')+statHTML('Gastos',bs(c.totalGastos),'p')+statHTML('Comandas',nord,'s');
+  var q=computeCuadre(draft,c), ch=document.getElementById('arqCuadre');
+  if(ch){
+    var col=q.estado==='CUADRADO'?'var(--accent)':(q.estado==='SOBRANTE'?'var(--amber)':'var(--red)');
+    ch.innerHTML='<div class="strip">'+statHTML('Efectivo esperado',bs(q.saldo),'g')+statHTML('Contado en sobre',bs(q.sobre),'p')+statHTML('Contado total',bs(q.totalContado),'s')+'</div>'+
+      '<div class="note" style="margin-top:8px;font-weight:800;color:'+col+'">'+q.estado+(q.estado!=='CUADRADO'?' · '+bs(Math.abs(q.dif)):'')+'</div>';
+  }
 }
 function cancelArqueo(){ arqMode='list'; draft=null; renderArqueos(); }
 async function saveArqueo(){
@@ -2578,14 +2622,15 @@ async function saveArqueo(){
   if(!draft.nro){ toast('Coloca el número de arqueo'); return; }
   if(!draft.cajero){ toast('Coloca el cajero'); return; }
   if(!draft.ordenes.some(function(o){return num(o.v)>0;})){ toast('Agrega al menos una comanda con monto'); return; }
-  var c=computeArqTotals(draft), id=draft.suc+'_'+draft.nro;
+  var c=computeArqTotals(draft), q=computeCuadre(draft,c), id=draft.suc+'_'+draft.nro;
   try{ var cache=await loadArqSuc(draft.suc); if(cache.some(function(a){return a.id===id;})){ if(!confirm('Ya existe un arqueo Nro '+draft.nro+' en esta sucursal. ¿Sobrescribir?')) return; } }catch(e){}
+  var conteoObj=Object.assign({}, draft.conteo||{}); conteoObj.cajaChica=num(draft.cajaChica);
   var doc={ id:id, nro:draft.nro, suc:draft.suc, fecha:draft.fecha, cajero:draft.cajero,
     turno:(draft.turnoIni&&draft.turnoFin?draft.turnoIni+'-'+draft.turnoFin:(draft.turnoIni||draft.turnoFin||'')),
-    ventasExcel:c.ventasExcel, ventasGerente:0, ventasPeya:c.ventasPeya, ventasLocal:c.ventasLocal, ventasYango:c.ventasYango,
+    ventasExcel:c.ventasExcel, ventasGerente:num(draft.ventasGerente), ventasPeya:c.ventasPeya, ventasLocal:c.ventasLocal, ventasYango:c.ventasYango,
     tEfectivoPeya:c.t.tEfectivoPeya, tOnlinePeya:c.t.tOnlinePeya, tVouchers:c.t.tVouchers, tDsctoPromo:c.t.tDsctoPromo, tOtrosDsctos:c.t.tOtrosDsctos,
     tEfectivoLocal:c.t.tEfectivoLocal, tTarjetaLocal:c.t.tTarjetaLocal, tTransfQR:c.t.tTransfQR,
-    totalGastos:c.totalGastos, saldo:0, sobre:0, difArqueo:0,
+    totalGastos:c.totalGastos, saldo:q.saldo, sobre:q.sobre, difArqueo:q.dif, conteo:conteoObj,
     comentarios:draft.comentarios||'', mes:(MONTHS[parseInt(draft.fecha.slice(5,7),10)-1]||'').toLowerCase(),
     ordenes:draft.ordenes.filter(function(o){return num(o.v)>0||o.n;}).map(function(o){ var a={}; if(num(o.v)>0) a[o.c]=num(o.v); var r={m:o.m,a:a}; if(o.n) r.n=o.n; return r; }),
     gastos:draft.gastos.filter(function(g){return g.g||num(g.t)>0;}).map(function(g){ return {g:g.g,t:num(g.t),tipo:g.tipo,doc:g.doc,docnro:g.docnro}; }),
