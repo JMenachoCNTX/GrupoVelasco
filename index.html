@@ -502,7 +502,14 @@
       <div class="panel">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <h3 style="margin:0">🧾 Arqueos — GrupoVelasco</h3>
-          <button class="mini acc" style="margin-left:auto" onclick="newArqueo()">➕ Nuevo arqueo</button>
+          <button class="mini" style="margin-left:auto" onclick="toggleArqCfg()">⚙️</button>
+          <button class="mini acc" onclick="newArqueo()">➕ Nuevo arqueo</button>
+        </div>
+        <div id="arqCfgBox" style="display:none;margin-top:10px">
+          <div class="note" style="margin-bottom:6px">Correo automático del arqueo (requiere pegar la URL del Apps Script).</div>
+          <input class="fld" id="gvMailUrl" placeholder="URL del Apps Script (termina en /exec)">
+          <input class="fld" id="gvMailTo" placeholder="Destinatarios (separados por coma)" style="margin-top:6px">
+          <div style="margin-top:6px"><button class="mini acc" onclick="saveArqMail()">Guardar</button></div>
         </div>
         <div class="note" id="arqHelp" style="margin:8px 0 0">Historial de cierres de caja (desde 2026). Elige la sucursal y el mes.</div>
         <div class="setpills" id="arqSucPills"></div>
@@ -562,7 +569,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v36';
+var APP_VERSION = 'v37';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -2415,6 +2422,7 @@ async function renderArqueos(){
     return;
   }
   var hs=document.getElementById('arqHelp'); if(hs) hs.style.display='';
+  var mcfg=(DB.config&&DB.config.gvMail)||{}; var mu=document.getElementById('gvMailUrl'); if(mu) mu.value=mcfg.url||''; var mt=document.getElementById('gvMailTo'); if(mt) mt.value=mcfg.to||'';
   if(!arqSuc) arqSuc=GV_SUC[0].id;
   document.getElementById('arqSucPills').innerHTML = GV_SUC.map(function(s){
     return '<button class="'+(s.id===arqSuc?'on':'')+'" onclick="setArqSuc(\''+s.id+'\')">'+s.name+'</button>'; }).join('');
@@ -2448,7 +2456,7 @@ function openArq(id){
   arqSel=id;
   var a=(gvCache[arqSuc]||[]).filter(function(x){return x.id===id;})[0];
   var host=document.getElementById('arqDetail'); if(!a||!host) return;
-  var h='<div class="panel"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Arqueo Nro '+esc(a.nro)+' · '+fmtDate(a.fecha)+'</h3><button class="mini" style="margin-left:auto" onclick="printArqueo(\''+a.id+'\')">🧾 PDF</button></div>';
+  var h='<div class="panel"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Arqueo Nro '+esc(a.nro)+' · '+fmtDate(a.fecha)+'</h3><button class="mini" style="margin-left:auto" onclick="printArqueo(\''+a.id+'\')">🧾 PDF</button><button class="mini" onclick="emailArqueo(\''+a.id+'\')">📧 Correo</button></div>';
   h+='<div class="note" style="margin-bottom:8px">Cajero: <b>'+esc(a.cajero)+'</b> · Turno: '+esc(a.turno||'—')+'</div>';
   h+='<div class="strip" style="margin-bottom:10px">'+statHTML('Ventas (Excel)',bs(a.ventasExcel),'g')+statHTML('Gastos',bs(a.totalGastos),'p')+statHTML('Saldo',bs(a.saldo),'s')+'</div>';
   h+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Concepto</th><th>Monto</th></tr></thead><tbody>';
@@ -2616,8 +2624,7 @@ function recalcArq(){
 }
 function cancelArqueo(){ arqMode='list'; draft=null; renderArqueos(); }
 function gvSucName(id){ var s=GV_SUC.filter(function(x){return x.id===id;})[0]; return s?s.name:id; }
-function printArqueo(id){
-  var a=(gvCache[arqSuc]||[]).filter(function(x){return x.id===id;})[0]; if(!a) return;
+function arqueoReportHTML(a){
   var sub='Sucursal: '+gvSucName(a.suc)+' · Arqueo Nro '+esc(a.nro)+' · Fecha: '+fullDate(a.fecha);
   var h=pdfLogoHead('REPORTE DE CIERRE DE CAJA', sub);
   h+='<div class="cap">Datos del arqueo</div><table><tbody>';
@@ -2658,8 +2665,29 @@ function printArqueo(id){
     h+='<tr class="tot"><td>Diferencia — '+est+'</td><td>'+fmt(a.difArqueo)+'</td></tr></tbody></table>';
   }
   if(a.comentarios) h+='<div class="cap">Comentarios del día</div><div style="font-size:12px">'+esc(a.comentarios)+'</div>';
-  openPrint('Arqueo '+a.nro+' — '+gvSucName(a.suc), h);
+  return h;
 }
+function printArqueo(id){ var a=(gvCache[arqSuc]||[]).filter(function(x){return x.id===id;})[0]; if(!a) return; openPrint('Arqueo '+a.nro+' — '+gvSucName(a.suc), arqueoReportHTML(a)); }
+function arqEmailDoc(a){
+  var css='body{font-family:Arial,sans-serif;color:#122036;padding:18px;font-size:12px}h1{font-size:18px;margin:0}.sub{color:#666;font-size:12px}.pdfhead{display:flex;align-items:center;gap:14px;border-bottom:2px solid #122036;padding-bottom:10px;margin-bottom:14px}.pdfbrand{height:40px}.cap{font-size:12px;font-weight:bold;margin:12px 0 4px;color:#33475f}table{width:100%;border-collapse:collapse;margin-bottom:6px}th,td{border:1px solid #d8d3c6;padding:5px 7px;font-size:11px;text-align:right}th{background:#f0ede4}th:first-child,td:first-child{text-align:left}tr.tot td{font-weight:bold;background:#f7f5ef}';
+  return '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><style>'+css+'</style></head><body>'+arqueoReportHTML(a)+'</body></html>';
+}
+async function emailArqueoObj(a){
+  var cfg=(DB.config&&DB.config.gvMail)||{};
+  if(!cfg.url) return false;
+  var subject='REPORTE DE CIERRE DE CAJA SUCURSAL: '+gvSucName(a.suc).toUpperCase()+' - Arqueo Nro. '+a.nro+' Fecha: '+fullDate(a.fecha);
+  try{
+    await fetch(cfg.url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({html:arqEmailDoc(a),subject:subject,to:cfg.to||'',filename:gvSucName(a.suc)+'.pdf'})});
+    return true;
+  }catch(e){ return false; }
+}
+function emailArqueo(id){
+  var a=(gvCache[arqSuc]||[]).filter(function(x){return x.id===id;})[0]; if(!a) return;
+  if(!(DB.config&&DB.config.gvMail&&DB.config.gvMail.url)){ toast('Configura la URL del correo en ⚙️ (arriba en Arqueos)'); return; }
+  toast('Enviando…'); emailArqueoObj(a).then(function(ok){ toast(ok?'Correo enviado ✓':'No se pudo enviar'); });
+}
+function toggleArqCfg(){ var el=document.getElementById('arqCfgBox'); if(!el) return; el.style.display=(el.style.display==='none'||!el.style.display)?'block':'none'; }
+function saveArqMail(){ DB.config=DB.config||{}; DB.config.gvMail={url:(document.getElementById('gvMailUrl').value||'').trim(), to:(document.getElementById('gvMailTo').value||'').trim()}; saveLocal(); toast('Configuración de correo guardada'); }
 async function saveArqueo(){
   readDraft();
   if(!draft.suc){ toast('Elige la sucursal'); return; }
@@ -2685,6 +2713,7 @@ async function saveArqueo(){
     await db.collection('gvArqueos').doc(id).set(doc);
     delete gvCache[draft.suc];
     toast('Arqueo guardado ✓');
+    if(DB.config&&DB.config.gvMail&&DB.config.gvMail.url){ emailArqueoObj(doc).then(function(ok){ if(ok) toast('Correo enviado ✓'); }); }
     arqMode='list'; arqSuc=draft.suc; arqYM=draft.fecha.slice(0,7); arqSel=id; draft=null;
     renderArqueos();
   }catch(e){ toast('No se pudo guardar: '+e.message); }
