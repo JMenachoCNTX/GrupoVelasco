@@ -34,6 +34,8 @@
   .home .sver{font-size:13px; color:var(--muted); font-weight:600; margin-top:5px}
   .home .hello{margin-top:20px; font-size:15px; color:var(--ink2)}
   .home .hbtn{margin-top:24px}
+  .home .homeClassic{width:min(440px,90vw); margin:30px 0 0; border-radius:16px; border:1px solid var(--line);
+    box-shadow:var(--shadow); object-fit:cover}
   button{font-family:inherit; cursor:pointer}
   input,select,button{font-size:15px}
   .mono{font-variant-numeric:tabular-nums; font-feature-settings:"tnum"}
@@ -206,6 +208,7 @@
   .mini.acc{background:var(--accent); color:#fff; border-color:var(--accent)}
   .mini.acc:hover{background:var(--accent2)}
   .empty{text-align:center; color:var(--muted); padding:40px 16px; font-size:14px}
+  .empty .cl{width:min(240px,66vw); border-radius:14px; margin:0 auto 14px; display:block; border:1px solid var(--line); box-shadow:var(--shadow)}
   .brsec{display:flex; align-items:center; gap:10px; margin:20px 0 11px; padding:0 2px}
   .brsec:first-child{margin-top:2px}
   .brsec .ln{flex:1; height:1px; background:var(--line)}
@@ -290,6 +293,31 @@
     .drow{grid-template-columns:56px 1fr 1fr 1fr 62px; gap:5px}
     .cellin{padding:8px 3px}
   }
+
+  /* ---------- CARGA NUMMEROS ---------- */
+  .loadov{position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
+    background:rgba(244,250,245,.82); backdrop-filter:saturate(1.1) blur(2px)}
+  .loadov.on{display:flex; animation:lovIn .18s ease}
+  @keyframes lovIn{from{opacity:0}to{opacity:1}}
+  .loadbox{display:flex; flex-direction:column; align-items:center; gap:16px; padding:26px 30px;
+    background:#fff; border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); min-width:220px}
+  .loadN{width:58px; height:58px}
+  .loadN path{fill:var(--accent); transform-origin:center; animation:nPulse 1.1s ease-in-out infinite}
+  @keyframes nPulse{0%,100%{opacity:.35; transform:scale(.9)}50%{opacity:1; transform:scale(1)}}
+  .loadmsg{font-family:"Akshar","Century Gothic",sans-serif; font-weight:600; font-size:15px; color:var(--ink); letter-spacing:.3px}
+  .loadbar{width:190px; height:7px; border-radius:99px; background:var(--chip); overflow:hidden; position:relative}
+  .loadbar::before{content:""; position:absolute; top:0; left:0; height:100%; width:42%; border-radius:99px;
+    background:linear-gradient(90deg,var(--accent),var(--muted)); animation:barSlide 1.15s cubic-bezier(.65,0,.35,1) infinite}
+  @keyframes barSlide{0%{left:-45%}100%{left:105%}}
+
+  /* ---------- ANIMACIONES DE ENTRADA ---------- */
+  @keyframes riseIn{from{opacity:0; transform:translateY(10px)}to{opacity:1; transform:none}}
+  @keyframes growBar{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+  @keyframes growRow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  .anim .stat,.anim .card,.anim .kpi,.anim .panel>.chartbox,.anim .chartpanel{animation:riseIn .42s ease both}
+  .anim .stat:nth-child(2){animation-delay:.05s} .anim .stat:nth-child(3){animation-delay:.1s} .anim .stat:nth-child(4){animation-delay:.15s} .anim .stat:nth-child(5){animation-delay:.2s}
+  svg .gbar{transform-box:fill-box; transform-origin:bottom; animation:growBar .6s cubic-bezier(.22,1,.36,1) both}
+  svg .grow{transform-box:fill-box; transform-origin:left; animation:growRow .6s cubic-bezier(.22,1,.36,1) both}
 </style>
 </head>
 <body>
@@ -339,6 +367,7 @@
         <div class="sver">Versión <span id="homeVer">—</span></div>
         <div class="hello" id="homeHello"></div>
         <div class="hbtn"><button class="mini acc" onclick="showTab('Week')">Ir a registrar la semana →</button></div>
+        <img class="homeClassic" src="assets/nummeros/clasicos/los-tres-reunion.jpg" alt="Los clásicos de NUMMEROS" loading="lazy">
       </div>
     </section>
 
@@ -347,9 +376,9 @@
       <div id="pendAlert"></div>
       <div class="strip" id="weekStrip"></div>
       <div class="exbar">
-        <button class="mini" onclick="exportWeekExcel()">⬇ Excel de la semana</button>
-        <button class="mini" onclick="exportWeekPDF()">⬇ PDF de la semana</button>
-        <button class="mini" onclick="printAllWeekReceipts()">🧾 Recibos de la semana</button>
+        <button class="mini" onclick="exportWeekExcel()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 4v10M8 10l4 4 4-4"/><path d="M5 19h14"/></svg> Excel de la semana</button>
+        <button class="mini" onclick="exportWeekPDF()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 4v10M8 10l4 4 4-4"/><path d="M5 19h14"/></svg> PDF de la semana</button>
+        <button class="mini" onclick="printAllWeekReceipts()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21z"/><path d="M9 8h6M9 12h6"/></svg> Recibos de la semana</button>
       </div>
       <div class="setpills" id="weekFilter"></div>
       <div id="empList"></div>
@@ -377,13 +406,13 @@
     <!-- RESUMEN -->
     <section id="scrMonth" class="scr">
       <div class="panel">
-        <h3>📅 Resumen del mes</h3>
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg> Resumen del mes</h3>
         <div class="addbar" style="margin-top:0">
           <input id="monthPick" class="fld" type="month" onchange="renderMonth()">
         </div>
         <div class="exbar" style="margin-top:10px">
-          <button class="mini" onclick="exportResumenExcel()">⬇ Excel de lo que veo</button>
-          <button class="mini" onclick="exportResumenPDF()">⬇ PDF de lo que veo</button>
+          <button class="mini" onclick="exportResumenExcel()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 4v10M8 10l4 4 4-4"/><path d="M5 19h14"/></svg> Excel de lo que veo</button>
+          <button class="mini" onclick="exportResumenPDF()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 4v10M8 10l4 4 4-4"/><path d="M5 19h14"/></svg> PDF de lo que veo</button>
         </div>
         <div class="note" style="margin-top:8px">Suma las semanas cuyo lunes cae dentro del mes elegido.</div>
       </div>
@@ -407,8 +436,8 @@
     <section id="scrSched" class="scr">
       <div class="strip" id="schedStrip"></div>
       <div class="exbar">
-        <button class="mini" onclick="exportSchedTemplate()">⬇ Plantilla Excel</button>
-        <button class="mini" onclick="document.getElementById('schedFile').click()">⬆ Subir Excel</button>
+        <button class="mini" onclick="exportSchedTemplate()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 4v10M8 10l4 4 4-4"/><path d="M5 19h14"/></svg> Plantilla Excel</button>
+        <button class="mini" onclick="document.getElementById('schedFile').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 20V8M8 12l4-4 4 4"/><path d="M5 5h14"/></svg> Subir Excel</button>
         <input id="schedFile" type="file" accept=".xlsx,.xls" style="display:none" onchange="importSched(event)">
       </div>
       <div id="schedList"></div>
@@ -417,7 +446,7 @@
     <!-- PERSONAL -->
     <section id="scrStaff" class="scr">
       <div class="panel">
-        <h3>👥 Personal de <span id="staffBranch"></span></h3>
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 6.2a3 3 0 0 1 0 5.6M16.5 19a5.5 5.5 0 0 0-2-4.3"/></svg> Personal de <span id="staffBranch"></span></h3>
         <div id="staffList"></div>
         <div class="addbar" id="addEmpBar">
           <select id="newEmpBranch" class="fld" style="max-width:130px;display:none"></select>
@@ -433,13 +462,13 @@
       <div class="setpills" id="setPills"></div>
 
       <div class="panel setsec" data-sec="tarifas">
-        <h3>💵 Tarifas por hora</h3>
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg> Tarifas por hora</h3>
         <div id="ratesBox"></div>
         <div class="note" style="margin-top:8px">La tarifa se aplica a las semanas nuevas. Cada semana guarda la tarifa con la que se calculó.</div>
       </div>
 
       <div class="panel setsec" data-sec="nube">
-        <h3>☁️ Sincronización en la nube (opcional)</h3>
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M7 18a4 4 0 0 1 .6-7.96A5 5 0 0 1 17 10a3.5 3.5 0 0 1 0 8H7z"/></svg> Sincronización en la nube (opcional)</h3>
         <div class="cloudstat" id="cloudStat"><span class="led"></span><span>Sin conectar — modo local</span></div>
         <div style="margin-top:12px">
           <label>Nombre del espacio compartido</label>
@@ -455,7 +484,7 @@
       </div>
 
       <div class="panel setsec" data-sec="respaldo">
-        <h3>💾 Respaldo de datos</h3>
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/></svg> Respaldo de datos</h3>
         <div class="payactions">
           <button class="mini" onclick="exportData()">Exportar (.json)</button>
           <button class="mini" onclick="document.getElementById('impFile').click()">Importar</button>
@@ -465,25 +494,25 @@
       </div>
 
       <div class="panel setsec" data-sec="controles" id="schedAlertBox">
-        <h3>⚠️ Alerta de horarios (presup. vs real)</h3>
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 3L2 20h20z"/><path d="M12 9v5M12 17h0"/></svg> Alerta de horarios (presup. vs real)</h3>
         <div id="schedAlertCfg"></div>
         <div class="note" style="margin-top:8px">Marca "Revisar" cuando lo real supere lo presupuestado por encima de estos márgenes.</div>
       </div>
 
       <div class="panel setsec" data-sec="controles" id="limitsBox">
-        <h3>⛔ Límites de horas por día</h3>
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg> Límites de horas por día</h3>
         <div id="limitsCfg"></div>
         <div class="note" style="margin-top:8px">El cajero no podrá registrar más de estos topes por día (control anti-fraude).</div>
       </div>
 
       <div class="panel setsec" data-sec="controles" id="reminderBox">
-        <h3>⏰ Aviso a cajeros</h3>
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg> Aviso a cajeros</h3>
         <div id="reminderCfg"></div>
         <div class="note" style="margin-top:8px">Les aparece un recordatorio al abrir el sistema ese día, para que completen las horas antes del pago.</div>
       </div>
 
       <div class="panel setsec" data-sec="sucursales" id="branchBox">
-        <h3>🏢 Sucursales</h3>
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M10 21v-3h4v3"/></svg> Sucursales</h3>
         <div id="branchList"></div>
         <div class="divider"></div>
         <div class="addbar"><input id="newBranchName" class="fld grow" placeholder="Nombre de la nueva sucursal"><button class="mini acc" onclick="addBranch()">Crear</button></div>
@@ -491,7 +520,7 @@
       </div>
 
       <div class="panel setsec" data-sec="accesos" id="adminBox">
-        <h3>🔑 Accesos (solo administrador)</h3>
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><circle cx="8" cy="15" r="3.5"/><path d="M10.5 12.5L20 3M16 3h4v4"/></svg> Accesos (solo administrador)</h3>
         <div id="usersBox"></div>
         <div class="divider"></div>
         <button class="mini" style="color:var(--red);border-color:#f0d3cf" onclick="resetAll()">Borrar todos los datos</button>
@@ -506,9 +535,9 @@
     <section id="scrArq" class="scr">
       <div class="panel">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <h3 style="margin:0">🧾 Arqueos — GrupoVelasco</h3>
-          <button class="mini" style="margin-left:auto" onclick="toggleArqCfg()">⚙️</button>
-          <button class="mini acc" onclick="newArqueo()">➕ Nuevo arqueo</button>
+          <h3 style="margin:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21z"/><path d="M9 8h6M9 12h6"/></svg> Arqueos — GrupoVelasco</h3>
+          <button class="mini" style="margin-left:auto" onclick="toggleArqCfg()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></button>
+          <button class="mini acc" onclick="newArqueo()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 5v14M5 12h14"/></svg> Nuevo arqueo</button>
         </div>
         <div id="arqCfgBox" style="display:none;margin-top:10px">
           <div class="note" style="margin-bottom:6px">Correo automático del arqueo (requiere pegar la URL del Apps Script).</div>
@@ -526,19 +555,27 @@
   </main>
 
   <nav class="tabs" id="tabs">
-    <button data-scr="Home" class="on" onclick="showTab('Home')"><span class="ic">🏠</span>Inicio</button>
-    <button data-scr="Week" onclick="showTab('Week')"><span class="ic">🗓️</span>Semana</button>
-    <button data-scr="Cal" onclick="showTab('Cal')"><span class="ic">📆</span>Calendario</button>
-    <button data-scr="Month" onclick="showTab('Month')"><span class="ic">📊</span>Resumen</button>
-    <button data-scr="Rep" onclick="showTab('Rep')"><span class="ic">📈</span>Tablero</button>
-    <button data-scr="Sched" id="tabSched" onclick="showTab('Sched')" style="display:none"><span class="ic">📋</span>Horarios</button>
-    <button data-scr="Staff" onclick="showTab('Staff')"><span class="ic">👥</span>Personal</button>
-    <button data-scr="Arq" id="tabArq" onclick="showTab('Arq')" style="display:none"><span class="ic">🧾</span>Arqueos</button>
-    <button data-scr="Set" onclick="showTab('Set')"><span class="ic">⚙️</span>Ajustes</button>
+    <button data-scr="Home" class="on" onclick="showTab('Home')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></span>Inicio</button>
+    <button data-scr="Week" onclick="showTab('Week')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span>Semana</button>
+    <button data-scr="Cal" onclick="showTab('Cal')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span>Calendario</button>
+    <button data-scr="Month" onclick="showTab('Month')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/><path d="M4 20h17"/></svg></span>Resumen</button>
+    <button data-scr="Rep" onclick="showTab('Rep')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M4 20h16"/><path d="M4 15l5-5 4 3 7-8"/></svg></span>Tablero</button>
+    <button data-scr="Sched" id="tabSched" onclick="showTab('Sched')" style="display:none"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3.2h6V5H9z"/><path d="M8.5 11h7M8.5 15h5"/></svg></span>Horarios</button>
+    <button data-scr="Staff" onclick="showTab('Staff')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 6.2a3 3 0 0 1 0 5.6M16.5 19a5.5 5.5 0 0 0-2-4.3"/></svg></span>Personal</button>
+    <button data-scr="Arq" id="tabArq" onclick="showTab('Arq')" style="display:none"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21z"/><path d="M9 8h6M9 12h6"/></svg></span>Arqueos</button>
+    <button data-scr="Set" onclick="showTab('Set')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></span>Ajustes</button>
   </nav>
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div class="loadov" id="loadOverlay">
+  <div class="loadbox">
+    <svg class="loadN" viewBox="0 0 546 728" aria-hidden="true"><path d="M0 427 L0 728 L136 728 L136 634 Z M410 0 L410 85 L546 292 L546 0 Z M0 0 L148 0 L410 458.5 L410 341 L546 548 L546 728 L401.71 728 L136 263 L136 379 L0 172 Z"/></svg>
+    <div class="loadmsg" id="loadMsg">Cargando…</div>
+    <div class="loadbar"></div>
+  </div>
+</div>
 
 <div class="modalOverlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
   <div class="modalCard" id="modalCard"></div>
@@ -547,15 +584,15 @@
 <script>
 /* ================= CONSTANTES ================= */
 var DEFAULT_BRANCHES = [
-  {id:'cine', name:'Cine', color:'#0e7a5f', active:true},
-  {id:'memphis', name:'Memphis', color:'#2f3f8f', active:true},
-  {id:'sushiflash', name:'Sushiflash', color:'#e8481f', active:true}
+  {id:'cine', name:'Cine', color:'#235347', active:true},
+  {id:'memphis', name:'Memphis', color:'#8eb69b', active:true},
+  {id:'sushiflash', name:'Sushiflash', color:'#163832', active:true}
 ];
 var BRANCHES = DEFAULT_BRANCHES.map(function(b){ return {id:b.id, name:b.name}; }); // solo ACTIVAS; se reconstruye
 var DAYS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 var DAYS_L = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 var MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-var BRANCH_COLORS = { cine:'#0e7a5f', memphis:'#2f3f8f', sushiflash:'#e8481f' };
+var BRANCH_COLORS = { cine:'#235347', memphis:'#8eb69b', sushiflash:'#163832' };
 function allBranchesArr(){ return (DB && DB.config && DB.config.branches && DB.config.branches.length) ? DB.config.branches : DEFAULT_BRANCHES; }
 function branchColor(id){ var b=allBranchesArr().filter(function(x){return x.id===id;})[0]; return (b&&b.color)?b.color:(BRANCH_COLORS[id]||'#235347'); }
 function branchActive(id){ var b=allBranchesArr().filter(function(x){return x.id===id;})[0]; return b?b.active!==false:false; }
@@ -574,7 +611,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v38';
+var APP_VERSION = 'v39';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -629,7 +666,7 @@ function maybeShowReminder(){
   window.__remKey=key;
   var prevMon=addDays(mondayOf(hoy),-7), sun=addDays(prevMon,6);
   var rango=prevMon.getDate()+'/'+(prevMon.getMonth()+1)+' al '+sun.getDate()+'/'+(sun.getMonth()+1);
-  var h='<h3>⏰ Recordatorio importante</h3>';
+  var h='<h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg> Recordatorio importante</h3>';
   h+='<div class="body">Por favor <b>completa las horas de la semana pasada</b> ('+rango+') <b>antes de que termine hoy</b>.<br><br>El pago del <b>jueves</b> se realiza según lo que esté registrado en el sistema. Si falta información, el pago podría salir <b>incompleto</b>.</div>';
   h+='<div class="acts"><button class="mini" onclick="dismissReminder()">Entendido</button><button class="mini acc" onclick="gotoPrevWeek()">Ir a esa semana</button></div>';
   openModal(h);
@@ -674,6 +711,20 @@ function addDays(d,n){ var x=new Date(d); x.setDate(x.getDate()+n); return x; }
 function uid(){ return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function branchName(id){ var b=allBranchesArr().filter(function(x){return x.id===id;})[0]; return b?b.name:id; }
 function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('show')},1900); }
+/* ---- Carga NUMMEROS ---- */
+function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+function showLoader(msg){ var o=document.getElementById('loadOverlay'); if(!o) return; var m=document.getElementById('loadMsg'); if(m) m.textContent=msg||'Cargando…'; o.classList.add('on'); }
+function hideLoader(){ var o=document.getElementById('loadOverlay'); if(o) o.classList.remove('on'); }
+/* Ejecuta trabajo asíncrono mostrando la carga al menos `ms` (por defecto 1800ms). */
+async function withLoader(msg, work, ms){
+  ms=(ms==null?1800:ms); showLoader(msg);
+  var t0=Date.now(), res, err;
+  try{ res=(typeof work==='function')? await work() : undefined; }catch(e){ err=e; }
+  var left=ms-(Date.now()-t0); if(left>0) await sleep(left);
+  hideLoader(); if(err) throw err; return res;
+}
+/* Marca una sección para que reproduzca las animaciones de entrada. */
+function playAnim(id){ var el=document.getElementById(id); if(!el) return; el.classList.remove('anim'); void el.offsetWidth; el.classList.add('anim'); }
 function today(){ return isoLocal(new Date()); }
 
 /* ================= DATOS POR DEFECTO ================= */
@@ -948,7 +999,7 @@ function renderWeek(){
     } else {
       if(inner){ html='<div class="cardgrid">'+inner+'</div>'; }
       else if(emps.length){ html='<div class="empty">No hay trabajadores en este filtro esta semana.</div>'; }
-      else { html='<div class="empty">No hay personal activo en '+branchName(bid)+'.<br>Agrégalo en la pestaña <b>Personal</b>.</div>'; }
+      else { html='<div class="empty"><img class="cl" src="assets/nummeros/clasicos/euclides-laptop.jpg" alt="" loading="lazy">No hay personal activo en '+branchName(bid)+'.<br>Agrégalo en la pestaña <b>Personal</b>.</div>'; }
     }
   });
   if(curBranch==='all' && !html){ html='<div class="empty">No hay trabajadores en este filtro esta semana.</div>'; }
@@ -986,7 +1037,7 @@ function empBodyHTML(id, entry, c, wk){
   var ent=getEntry(wk,id,false);
   var r=c.r, re=c.re, admin=isAdmin(), editor=canEdit(), roleRO=!editor;
   var weekPaid = c.estado==='PAGADO';
-  var h='<div class="ratebadge">💲 Tarifa esta semana: <b>Normal Bs '+trim(r)+'/h</b> · <b>Extra Bs '+trim(re)+'/h</b></div>';
+  var h='<div class="ratebadge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg> Tarifa esta semana: <b>Normal Bs '+trim(r)+'/h</b> · <b>Extra Bs '+trim(re)+'/h</b></div>';
   h+='<div class="drow head"><span></span><span>Horas</span><span>Extras</span><span>Desc. Bs</span><span>Total</span></div>';
   for(var i=0;i<7;i++){
     var cell=ent.d[i]||{};
@@ -1012,16 +1063,16 @@ function empBodyHTML(id, entry, c, wk){
   h+='</div>';
 
   if(weekPaid && !admin && editor){
-    h+='<div class="note" style="background:#e2f1ea;color:var(--accent2);border-radius:10px;padding:9px 11px;margin-top:10px;font-weight:600">🔒 Semana pagada por completo. Para cualquier cambio, contacta al administrador.</div>';
+    h+='<div class="note" style="background:#e2f1ea;color:var(--accent2);border-radius:10px;padding:9px 11px;margin-top:10px;font-weight:600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Semana pagada por completo. Para cualquier cambio, contacta al administrador.</div>';
   }
   var _pt=schedTotal(wk,id);
   if(_pt>0){
     var _flag=schedFlag(wk,id);
-    h+='<div class="note" style="margin-top:10px;border-radius:10px;padding:9px 11px;font-weight:600;'+(_flag?'background:#fdf0d8;color:var(--amber)':'background:var(--chip);color:var(--ink2)')+'">📋 Presupuestado RRHH: '+trim(_pt)+' h · Real: '+trim(c.hrs)+' h'+(_flag?' · ⚠️ revisar diferencia':'')+'</div>';
+    h+='<div class="note" style="margin-top:10px;border-radius:10px;padding:9px 11px;font-weight:600;'+(_flag?'background:#fdf0d8;color:var(--amber)':'background:var(--chip);color:var(--ink2)')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3.2h6V5H9z"/><path d="M8.5 11h7M8.5 15h5"/></svg> Presupuestado RRHH: '+trim(_pt)+' h · Real: '+trim(c.hrs)+' h'+(_flag?' · <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 3L2 20h20z"/><path d="M12 9v5M12 17h0"/></svg> revisar diferencia':'')+'</div>';
   }
 
   // ---- Pagos por día ----
-  h+='<div class="paysec"><h4>💵 Pagos por día</h4>';
+  h+='<div class="paysec"><h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg> Pagos por día</h4>';
   var anyWorked=false, anyUnpaid=false;
   for(var i=0;i<7;i++){
     var cell=ent.d[i]||{};
@@ -1037,7 +1088,7 @@ function empBodyHTML(id, entry, c, wk){
     h+='<div class="pday"><div class="day">'+DAYS[i]+' '+date.getDate()+'/'+(date.getMonth()+1)+' · Gana '+bs(dg)+(partial?' · <span style="color:var(--amber)">falta '+bs(rem)+'</span>':'')+'</div><div class="ctrls">';
     if(full){
       h+='<span class="paidchip">✓ Pagado '+fmtDate(cell.pf)+' · '+bs(paid)+'</span>';
-      h+='<button class="mini" onclick="printDayReceipt(\''+id+'\','+i+')">🧾 Recibo</button>';
+      h+='<button class="mini" onclick="printDayReceipt(\''+id+'\','+i+')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21z"/><path d="M9 8h6M9 12h6"/></svg> Recibo</button>';
       if(admin) h+='<button class="mini" onclick="unpayDay(\''+id+'\','+i+')">Quitar</button>';
     } else if(!roleRO){
       anyUnpaid=true;
@@ -1060,7 +1111,7 @@ function empBodyHTML(id, entry, c, wk){
     ent.p.forEach(function(p,idx){ h+='<div class="payrow"><span class="pf">'+fmtDate(p.f)+'</span><span class="pm mono">'+bs(p.m)+'</span><span class="pn">'+esc(p.n||'')+'</span>'+(admin?'<button class="del" onclick="delPay(\''+id+'\','+idx+')">✕</button>':'')+'</div>'; });
   }
   var _paid=paidDaysOf(id);
-  if(_paid.length){ h+='<div style="margin-top:12px"><button class="mini" onclick="printPersonWeekReceipts(\''+id+'\')">🧾 Recibos de la semana ('+_paid.length+')</button></div>'; }
+  if(_paid.length){ h+='<div style="margin-top:12px"><button class="mini" onclick="printPersonWeekReceipts(\''+id+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21z"/><path d="M9 8h6M9 12h6"/></svg> Recibos de la semana ('+_paid.length+')</button></div>'; }
   h+='</div>';
   return h;
 }
@@ -1075,10 +1126,12 @@ function payDay(id,i){
   var f=fEl.value, m=num(mEl.value);
   if(!f){ toast('Coloca la fecha de pago'); return; }
   if(m<=0){ toast('Coloca el importe'); return; }
-  var e=getEntry(weekKey(curMonday),id,true);
-  e.d[i].pm = num(e.d[i].pm) + m;   // acumula (permite pagar la diferencia)
-  e.d[i].pf = f;
-  saveLocal(); rerenderCardBody(id); refreshCard(id); refreshStrip(); toast('Pago registrado');
+  withLoader('Guardando pago…', function(){
+    var e=getEntry(weekKey(curMonday),id,true);
+    e.d[i].pm = num(e.d[i].pm) + m;   // acumula (permite pagar la diferencia)
+    e.d[i].pf = f;
+    saveLocal(); rerenderCardBody(id); refreshCard(id); refreshStrip();
+  }, 1800).then(function(){ toast('Pago registrado'); });
 }
 function unpayDay(id,i){
   if(!isAdmin()) return;
@@ -1094,7 +1147,9 @@ function payAllDays(id){
   var rr=entryRates(e,empBranch(id)), r=rr.r, re=rr.re, n=0;
   for(var i=0;i<7;i++){ var c=e.d[i]||{h:0,e:0,x:0}; var dg=num(c.h)*r+num(c.e)*re-num(c.x); var rem=dg-num(c.pm); if(rem>0.009){ e.d[i]=c; c.pm=num(c.pm)+rem; c.pf=f; n++; } }
   if(!n){ toast('No hay días pendientes'); return; }
-  saveLocal(); rerenderCardBody(id); refreshCard(id); refreshStrip(); toast(n+' día(s) al día'); 
+  withLoader('Guardando pagos…', function(){
+    saveLocal(); rerenderCardBody(id); refreshCard(id); refreshStrip();
+  }, 1800).then(function(){ toast(n+' día(s) al día'); });
 }
 function trim(n){ return (Math.round(n*100)/100).toString().replace('.',','); }
 function fmtDate(s){ if(!s) return ''; var d=parseISO(s); return pad(d.getDate())+'/'+pad(d.getMonth()+1); }
@@ -1174,7 +1229,7 @@ function renderPendAlert(){
   var twoPlus=list.some(function(w){ return w.mon.getTime() <= curMon - 14*86400000; });
   var total=list.reduce(function(s,w){ return s+w.pend; },0);
   var chips=list.map(function(w){ var d=w.mon; return '<button class="pendchip" onclick="gotoWeek(\''+w.wk+'\')">Sem. '+d.getDate()+'/'+(d.getMonth()+1)+' · '+bs(w.pend)+'</button>'; }).join('');
-  var title = twoPlus ? '⚠️ Atención: hay semanas atrasadas sin pagar' : '⚠️ Hay semanas anteriores con saldo sin pagar';
+  var title = twoPlus ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 3L2 20h20z"/><path d="M12 9v5M12 17h0"/></svg> Atención: hay semanas atrasadas sin pagar' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 3L2 20h20z"/><path d="M12 9v5M12 17h0"/></svg> Hay semanas anteriores con saldo sin pagar';
   host.innerHTML='<div class="pendbar'+(twoPlus?' red':'')+'"><div class="pendtitle">'+title+' — total '+bs(total)+'.<br>Recuerda registrar los pagos para que no se acumulen.</div><div class="pendchips">'+chips+'</div></div>';
 }
 function gotoWeek(wk){ curMonday=mondayOf(parseISO(wk)); openEmp={}; openSched={}; showTab('Week'); renderWeekLabel(); renderWeek(); }
@@ -1228,7 +1283,7 @@ function addBranch(){
   ensureBranches();
   var id=slugBranch(name), base=id, n=2;
   while(DB.config.branches.some(function(b){return b.id===id;})){ id=base+n; n++; }
-  var palette=['#0e7a5f','#2f3f8f','#e8481f','#8a5a2b','#7a3f8f','#2d6d8f','#b23a5a','#4a7a2b'];
+  var palette=['#235347','#8eb69b','#163832','#557363','#0b2b26','#a9cfb5','#2f6f5a','#7fae8d'];
   var color=palette[DB.config.branches.length % palette.length];
   DB.config.branches.push({id:id, name:name, color:color, active:true});
   DB.config.rates=DB.config.rates||{}; DB.config.rates[id]={r:15,re:15};
@@ -1336,8 +1391,8 @@ function renderMonth(){
   var M=computeMonth(yy,mm,branches);
   var host=document.getElementById('monthBody');
   var pills='<div class="setpills">'
-    +'<button class="'+(monthView==='mes'?'on':'')+'" onclick="setMonthView(\'mes\')">📊 Por mes</button>'
-    +'<button class="'+(monthView==='semana'?'on':'')+'" onclick="setMonthView(\'semana\')">📅 Por semana</button>'
+    +'<button class="'+(monthView==='mes'?'on':'')+'" onclick="setMonthView(\'mes\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/><path d="M4 20h17"/></svg> Por mes</button>'
+    +'<button class="'+(monthView==='semana'?'on':'')+'" onclick="setMonthView(\'semana\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg> Por semana</button>'
     +'</div>';
   if(!M.wks.length){ host.innerHTML=pills+'<div class="empty">Sin registros en '+MONTHS[mm]+' '+yy+'.</div>'; return; }
   host.innerHTML = pills + (monthView==='mes' ? monthViewHTML(M,branches,yy,mm) : weekViewHTML(M,branches,yy,mm));
@@ -1346,7 +1401,7 @@ function renderMonth(){
 function monthViewHTML(M,branches,yy,mm){
   var out='';
   if(branches.length>1){
-    out+='<div class="panel"><h3>🧮 Total general — '+MONTHS[mm]+' '+yy+'</h3>';
+    out+='<div class="panel"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8"/><path d="M9 12h0M12 12h0M15 12h0M9 16h0M12 16h0M15 16h0"/></svg> Total general — '+MONTHS[mm]+' '+yy+'</h3>';
     out+='<div class="strip" style="margin-bottom:12px">'+statHTML('Ganado',bs(M.GG),'g')+statHTML('Pagado',bs(M.GP),'p')+statHTML('Pendiente',bs(M.GS),'s')+'</div>';
     out+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Sucursal</th><th>Ganado</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody>';
     branches.forEach(function(bid){ var b=M.perBranch[bid]; out+='<tr><td>'+branchName(bid)+'</td><td class="mono">'+fmt(b.bG)+'</td><td class="mono pos">'+fmt(b.bP)+'</td><td class="mono '+(b.bS>0.009?'neg':'')+'">'+fmt(b.bS)+'</td></tr>'; });
@@ -1371,13 +1426,13 @@ function weekViewHTML(M,branches,yy,mm,forPrint){
   var wG=0,wP=0,wS=0;
   branches.forEach(function(bid){ var w=M.perBranch[bid].perWeek[sel]; if(w){ wG+=w.g; wP+=w.p; wS+=w.s; } });
   if(!forPrint){
-    out+='<div class="panel"><h3>📅 Elige la semana — '+MONTHS[mm]+' '+yy+'</h3>';
+    out+='<div class="panel"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg> Elige la semana — '+MONTHS[mm]+' '+yy+'</h3>';
     out+='<div class="setpills" style="padding-bottom:4px">'+M.wks.map(function(wk){
       return '<button class="'+(wk===sel?'on':'')+'" onclick="setMonthWeek(\''+wk+'\')">'+wkLabel(wk)+'</button>'; }).join('')+'</div>';
     out+='<div class="note">Semana del <b>'+selD.getDate()+'/'+(selD.getMonth()+1)+'</b> al <b>'+selSun.getDate()+'/'+(selSun.getMonth()+1)+'</b> (lunes a domingo).</div></div>';
   }
   if(branches.length>1){
-    out+='<div class="panel"><h3>🧮 Total general — semana '+wkLabel(sel)+'</h3>';
+    out+='<div class="panel"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8"/><path d="M9 12h0M12 12h0M15 12h0M9 16h0M12 16h0M15 16h0"/></svg> Total general — semana '+wkLabel(sel)+'</h3>';
     out+='<div class="strip" style="margin-bottom:12px">'+statHTML('Ganado',bs(wG),'g')+statHTML('Pagado',bs(wP),'p')+statHTML('Pendiente',bs(wS),'s')+'</div>';
     out+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Sucursal</th><th>Ganado</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody>';
     branches.forEach(function(bid){ var w=M.perBranch[bid].perWeek[sel]||{g:0,p:0,s:0};
@@ -1385,7 +1440,7 @@ function weekViewHTML(M,branches,yy,mm,forPrint){
     out+='<tr class="tot"><td>Total</td><td class="mono">'+fmt(wG)+'</td><td class="mono pos">'+fmt(wP)+'</td><td class="mono '+(wS>0.009?'neg':'')+'">'+fmt(wS)+'</td></tr>';
     out+='</tbody></table></div></div>';
   } else {
-    out+='<div class="panel"><h3>🧮 Total — semana '+wkLabel(sel)+'</h3>';
+    out+='<div class="panel"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8"/><path d="M9 12h0M12 12h0M15 12h0M9 16h0M12 16h0M15 16h0"/></svg> Total — semana '+wkLabel(sel)+'</h3>';
     out+='<div class="strip">'+statHTML('Ganado',bs(wG),'g')+statHTML('Pagado',bs(wP),'p')+statHTML('Pendiente',bs(wS),'s')+'</div></div>';
   }
   branches.forEach(function(bid){
@@ -1459,7 +1514,7 @@ function dayData(date){
 function dayDetailPanelHTML(date){
   var D=dayData(date), showBr=(curBranch==='all');
   var lbl=DAYS_L[(date.getDay()+6)%7]+' '+date.getDate()+' de '+MONTHS[date.getMonth()]+' '+date.getFullYear();
-  var h='<div class="panel"><h3>📆 '+lbl+'</h3>';
+  var h='<div class="panel"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg> '+lbl+'</h3>';
   h+='<div class="strip" style="margin-bottom:8px">'+statHTML('Horas',trim(D.totH)+' h','g')+statHTML('Importe',bs(D.totImp),'p')+statHTML('Pagado',bs(D.totPay),'s')+'</div>';
   h+='<div class="note" style="font-weight:700;color:var(--ink2);margin:10px 0 4px">Trabajaron ('+D.worked.length+')</div>';
   if(D.worked.length){ D.worked.forEach(function(w){ h+='<div class="row"><div class="grow"><b>'+esc(w.name)+'</b>'+(showBr?' <span class="tag">'+branchName(w.b)+'</span>':'')+'<br><span class="tag">'+trim(w.h)+' h'+(w.ex?' · '+trim(w.ex)+' extra':'')+'</span></div><div class="mono">'+bs(w.imp)+'</div></div>'; }); }
@@ -1498,7 +1553,7 @@ function renderCalMonth(){
     if(!inM){ cells+='<div class="calcell out"></div>'; continue; }
     var hh=hMap[ds], pp=pMap[ds], nn=nMap[ds];
     cells+='<div class="calcell'+(ds===todayISO?' today':'')+(ds===calSel?' sel':'')+'" onclick="calPick(\''+ds+'\')">';
-    cells+='<div class="dn">'+d.getDate()+(nn?' <span class="cn">'+nn+'👤</span>':'')+'</div>';
+    cells+='<div class="dn">'+d.getDate()+(nn?' <span class="cn">'+nn+'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg></span>':'')+'</div>';
     if(hh) cells+='<div class="ch">'+trim(hh)+' h</div>';
     if(pp) cells+='<div class="cp">'+bs(pp)+'</div>';
     cells+='</div>';
@@ -1553,6 +1608,7 @@ async function ensureXLSX(){ if(window.XLSX) return true; await loadScript2('htt
 async function exportWeekExcel(){ return exportWeekExcelFor(weekKey(curMonday)); }
 async function exportWeekExcelFor(wk){
   try{ await ensureXLSX(); }catch(e){ toast('No se pudo cargar Excel (revisa tu internet)'); return; }
+  showLoader('Generando Excel…'); var _xts=Date.now();
   var rows=[['Sucursal','Trabajador','Lun','Mar','Mié','Jue','Vie','Sáb','Dom','Extras','Descuento','Ganado','Pagado','Saldo','Estado']];
   shownBranches().forEach(function(bid){
     activeEmps(bid).forEach(function(id){
@@ -1563,6 +1619,7 @@ async function exportWeekExcelFor(wk){
   });
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Semana');
+  var _xl=1500-(Date.now()-_xts); if(_xl>0) await sleep(_xl); hideLoader();
   XLSX.writeFile(wb,'horas-semana-'+wk+'.xlsx');
   toast('Excel descargado');
 }
@@ -1572,6 +1629,7 @@ async function exportMonthExcel(){
 }
 async function exportMonthExcelFor(yy,mm){
   try{ await ensureXLSX(); }catch(e){ toast('No se pudo cargar Excel (revisa tu internet)'); return; }
+  showLoader('Generando Excel…'); var _xts=Date.now();
   var branches=monthBranches();
   var M=computeMonth(yy,mm,branches), wb=XLSX.utils.book_new();
   var rs=[['Resumen '+MONTHS[mm]+' '+yy],[],['Sucursal','Ganado','Pagado','Pendiente']];
@@ -1588,7 +1646,8 @@ async function exportMonthExcelFor(yy,mm){
     if(wkeys.length){ rows.push([]); rows.push(['Semana','Ganado','Pagado','Pendiente']); wkeys.forEach(function(wk){ var w=b.perWeek[wk]; var dd=parseISO(wk); var sun=addDays(dd,6); rows.push([dd.getDate()+'/'+(dd.getMonth()+1)+'-'+sun.getDate()+'/'+(sun.getMonth()+1),round2(w.g),round2(w.p),round2(w.s)]); }); }
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),branchName(bid).slice(0,28));
   });
-  XLSX.writeFile(wb,'resumen-'+mp+'.xlsx');
+  var _xl=1500-(Date.now()-_xts); if(_xl>0) await sleep(_xl); hideLoader();
+  XLSX.writeFile(wb,'resumen-'+(mp||(yy+'-'+pad(mm+1)))+'.xlsx');
   toast('Excel descargado');
 }
 var printMode=false;
@@ -1610,6 +1669,7 @@ var PRINT_OVERRIDE =
 function printLikeApp(title, sub, inner){
   var w=window.open('','_blank');
   if(!w){ toast('Permite ventanas emergentes para el PDF'); return; }
+  showLoader('Preparando PDF…'); setTimeout(hideLoader,1500);
   w.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>'+title+'</title>'
     +'<style>'+appCSS()+'</style><style>'+PRINT_OVERRIDE+'</style></head><body><div class="wrap">'
     +'<div class="phead"><img src="'+CONTAX_LOGO+'"><div><div class="t">'+title+'</div><div class="s">'+sub+'</div></div></div>'
@@ -1621,6 +1681,7 @@ function printLikeApp(title, sub, inner){
 function openPrint(title,inner){
   var w=window.open('','_blank');
   if(!w){ toast('Permite ventanas emergentes para el PDF'); return; }
+  showLoader('Preparando PDF…'); setTimeout(hideLoader,1500);
   var css='body{font-family:Arial,Helvetica,sans-serif;color:#163832;padding:22px;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
     +'h1{font-size:19px;margin:0}h2{font-size:14px;margin:18px 0 6px;page-break-after:avoid}.sub{color:#666;font-size:12px;margin:2px 0 0}'
     +'.pdfhead{display:flex;align-items:center;gap:14px;border-bottom:2px solid #235347;padding-bottom:10px;margin-bottom:16px}'
@@ -1723,7 +1784,7 @@ function exportMonthPDFFor(yy,mm){
   var inner=pdfLogoHead('Resumen mensual', MONTHS[mm]+' '+yy);
   if(R.any){
     inner+='<div class="cap">Ganado por sucursal (pagado vs pendiente)</div><div class="chartbox">'+svgStacked(R.branchTotals.map(function(b){return {label:branchName(b.bid),pagado:b.pagado,pendiente:b.pendiente};}))+'</div>';
-    if(R.weekly.length){ inner+='<div class="cap">Evolución semanal</div><div class="chartbox">'+svgLines(R.weekly.map(function(w){return w.label;}),[{name:'Ganado',color:'#163832',values:R.weekly.map(function(w){return w.ganado;})},{name:'Pagado',color:'#0e7a5f',values:R.weekly.map(function(w){return w.pagado;})}])+'</div>'; }
+    if(R.weekly.length){ inner+='<div class="cap">Evolución semanal</div><div class="chartbox">'+svgLines(R.weekly.map(function(w){return w.label;}),[{name:'Ganado',color:'#163832',values:R.weekly.map(function(w){return w.ganado;})},{name:'Pagado',color:'#235347',values:R.weekly.map(function(w){return w.pagado;})}])+'</div>'; }
     if(R.topEmp.length){ inner+='<div class="cap">Top trabajadores por horas</div><div class="chartbox">'+svgHBars(R.topEmp.map(function(e){return {label:e.name,value:e.horas,color:branchColor(e.branch)};}))+'</div>'; }
   }
   if(branches.length>1){
@@ -1746,7 +1807,7 @@ function clip(s,n){ s=String(s==null?'':s); return s.length>n ? s.slice(0,n-1)+'
 function chartFrame(inner,w,h){ return '<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg" font-family="Akshar,Century Gothic,system-ui,sans-serif">'+inner+'</svg>'; }
 function gridY(padL,W,padR,padT,plotH,max,unit){
   var g='';
-  [0,0.5,1].forEach(function(t){ var y=padT+plotH-plotH*t; g+='<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'" stroke="#e3ddce"/>'; g+='<text x="'+(padL-6)+'" y="'+(y+4).toFixed(1)+'" font-size="10" fill="#7b8aa0" text-anchor="end">'+kfmt(max*t)+'</text>'; });
+  [0,0.5,1].forEach(function(t){ var y=padT+plotH-plotH*t; g+='<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'" stroke="#daf1de"/>'; g+='<text x="'+(padL-6)+'" y="'+(y+4).toFixed(1)+'" font-size="10" fill="#557363" text-anchor="end">'+kfmt(max*t)+'</text>'; });
   return g;
 }
 function svgVBars(items, unit){
@@ -1757,9 +1818,9 @@ function svgVBars(items, unit){
   var n=items.length, step=plotW/n, bw=Math.min(64, step*0.55);
   items.forEach(function(it,i){
     var x=padL+step*i+step/2-bw/2, bh=it.value/max*plotH, y=padT+plotH-bh;
-    g+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,bh).toFixed(1)+'" rx="4" fill="'+(it.color||'#2f3f8f')+'"/>';
+    g+='<rect class="gbar" x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,bh).toFixed(1)+'" rx="4" fill="'+(it.color||'#8eb69b')+'"/>';
     g+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(y-5).toFixed(1)+'" font-size="10.5" fill="#163832" text-anchor="middle" font-weight="700">'+(unit==='Bs'?kfmt(it.value):trim(it.value))+'</text>';
-    g+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(H-padB+16)+'" font-size="10.5" fill="#33475f" text-anchor="middle">'+esc(clip(it.label,12))+'</text>';
+    g+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(H-padB+16)+'" font-size="10.5" fill="#557363" text-anchor="middle">'+esc(clip(it.label,12))+'</text>';
   });
   return chartFrame(g,W,H);
 }
@@ -1773,13 +1834,13 @@ function svgStacked(items){
     var x=padL+step*i+step/2-bw/2;
     var ph=it.pagado/max*plotH, dh=it.pendiente/max*plotH;
     var yP=padT+plotH-ph, yD=yP-dh;
-    g+='<rect x="'+x.toFixed(1)+'" y="'+yP.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,ph).toFixed(1)+'" fill="#0e7a5f"/>';
-    g+='<rect x="'+x.toFixed(1)+'" y="'+yD.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,dh).toFixed(1)+'" rx="3" fill="#b8791b"/>';
+    g+='<rect class="gbar" x="'+x.toFixed(1)+'" y="'+yP.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,ph).toFixed(1)+'" fill="#235347"/>';
+    g+='<rect class="gbar" x="'+x.toFixed(1)+'" y="'+yD.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,dh).toFixed(1)+'" rx="3" fill="#8eb69b"/>';
     g+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(yD-5).toFixed(1)+'" font-size="10" fill="#163832" text-anchor="middle" font-weight="700">'+kfmt(it.pagado+it.pendiente)+'</text>';
-    g+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(H-padB+16)+'" font-size="10.5" fill="#33475f" text-anchor="middle">'+esc(clip(it.label,12))+'</text>';
+    g+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(H-padB+16)+'" font-size="10.5" fill="#557363" text-anchor="middle">'+esc(clip(it.label,12))+'</text>';
   });
-  g+='<rect x="'+padL+'" y="'+(H-16)+'" width="11" height="11" rx="2" fill="#0e7a5f"/><text x="'+(padL+16)+'" y="'+(H-6)+'" font-size="10.5" fill="#33475f">Pagado</text>';
-  g+='<rect x="'+(padL+82)+'" y="'+(H-16)+'" width="11" height="11" rx="2" fill="#b8791b"/><text x="'+(padL+98)+'" y="'+(H-6)+'" font-size="10.5" fill="#33475f">Pendiente</text>';
+  g+='<rect x="'+padL+'" y="'+(H-16)+'" width="11" height="11" rx="2" fill="#235347"/><text x="'+(padL+16)+'" y="'+(H-6)+'" font-size="10.5" fill="#557363">Pagado</text>';
+  g+='<rect x="'+(padL+82)+'" y="'+(H-16)+'" width="11" height="11" rx="2" fill="#8eb69b"/><text x="'+(padL+98)+'" y="'+(H-6)+'" font-size="10.5" fill="#557363">Pendiente</text>';
   return chartFrame(g,W,H);
 }
 function svgLines(labels, series){
@@ -1791,14 +1852,14 @@ function svgLines(labels, series){
   var xAt=function(i){ return n<=1 ? padL+plotW/2 : padL+plotW*i/(n-1); };
   var yAt=function(v){ return padT+plotH - v/max*plotH; };
   var g=gridY(padL,W,padR,padT,plotH,max,'Bs');
-  labels.forEach(function(l,i){ g+='<text x="'+xAt(i).toFixed(1)+'" y="'+(H-padB+16)+'" font-size="9.5" fill="#33475f" text-anchor="middle">'+esc(l)+'</text>'; });
+  labels.forEach(function(l,i){ g+='<text x="'+xAt(i).toFixed(1)+'" y="'+(H-padB+16)+'" font-size="9.5" fill="#557363" text-anchor="middle">'+esc(l)+'</text>'; });
   series.forEach(function(s){
     var pts=s.values.map(function(v,i){ return xAt(i).toFixed(1)+','+yAt(v).toFixed(1); }).join(' ');
     g+='<polyline points="'+pts+'" fill="none" stroke="'+s.color+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
     s.values.forEach(function(v,i){ g+='<circle cx="'+xAt(i).toFixed(1)+'" cy="'+yAt(v).toFixed(1)+'" r="3.2" fill="'+s.color+'"/>'; });
   });
   var lx=padL;
-  series.forEach(function(s){ g+='<rect x="'+lx+'" y="'+(H-15)+'" width="11" height="11" rx="2" fill="'+s.color+'"/><text x="'+(lx+16)+'" y="'+(H-5)+'" font-size="10.5" fill="#33475f">'+esc(s.name)+'</text>'; lx+=92; });
+  series.forEach(function(s){ g+='<rect x="'+lx+'" y="'+(H-15)+'" width="11" height="11" rx="2" fill="'+s.color+'"/><text x="'+(lx+16)+'" y="'+(H-5)+'" font-size="10.5" fill="#557363">'+esc(s.name)+'</text>'; lx+=92; });
   return chartFrame(g,W,H);
 }
 function svgHBars(items){
@@ -1810,8 +1871,8 @@ function svgHBars(items){
   items.forEach(function(it,i){
     var y=padT+i*rowH, w=Math.max(2,it.value/max*barW);
     g+='<text x="'+padL+'" y="'+(y+rowH/2+4).toFixed(1)+'" font-size="11" fill="#163832" font-weight="600">'+esc(clip(it.label,17))+'</text>';
-    g+='<rect x="'+barX+'" y="'+(y+5).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+(rowH-12)+'" rx="4" fill="'+(it.color||'#2f3f8f')+'"/>';
-    g+='<text x="'+(barX+w+6).toFixed(1)+'" y="'+(y+rowH/2+4).toFixed(1)+'" font-size="10.5" fill="#33475f" font-weight="700">'+trim(it.value)+' h</text>';
+    g+='<rect class="grow" x="'+barX+'" y="'+(y+5).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+(rowH-12)+'" rx="4" fill="'+(it.color||'#8eb69b')+'"/>';
+    g+='<text x="'+(barX+w+6).toFixed(1)+'" y="'+(y+rowH/2+4).toFixed(1)+'" font-size="10.5" fill="#557363" font-weight="700">'+trim(it.value)+' h</text>';
   });
   return chartFrame(g,W,H);
 }
@@ -1884,7 +1945,7 @@ function deltaHTML(cur, prev){
   var d=(cur-prev)/prev*100;
   if(Math.abs(d)<0.5) return '<span style="color:var(--muted);font-weight:700">▬ 0%</span>';
   var up=d>0;
-  return '<span style="color:'+(up?'#b8791b':'#0e7a5f')+';font-weight:700">'+(up?'▲':'▼')+' '+Math.abs(d).toFixed(0)+'%</span>';
+  return '<span style="color:'+(up?'#8eb69b':'#235347')+';font-weight:700">'+(up?'▲':'▼')+' '+Math.abs(d).toFixed(0)+'%</span>';
 }
 var repView='mes', repWeekSel=null;
 function setRepView(v){ repView=v; renderReports(); }
@@ -1908,10 +1969,10 @@ function renderReports(){
   var branches=shownBranches(), host=document.getElementById('repBody');
   repCharts={};
   var pills='<div class="setpills">'
-    +'<button class="'+(repView==='mes'?'on':'')+'" onclick="setRepView(\'mes\')">📊 Por mes</button>'
-    +'<button class="'+(repView==='semana'?'on':'')+'" onclick="setRepView(\'semana\')">📅 Por semana</button>'
+    +'<button class="'+(repView==='mes'?'on':'')+'" onclick="setRepView(\'mes\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/><path d="M4 20h17"/></svg> Por mes</button>'
+    +'<button class="'+(repView==='semana'?'on':'')+'" onclick="setRepView(\'semana\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg> Por semana</button>'
     +'</div>';
-  var bar='<div class="exbar"><button class="mini" onclick="exportRepPDF()">⬇ PDF de lo que veo</button><button class="mini" onclick="exportRepExcel()">⬇ Excel de lo que veo</button></div>';
+  var bar='<div class="exbar"><button class="mini" onclick="exportRepPDF()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 4v10M8 10l4 4 4-4"/><path d="M5 19h14"/></svg> PDF de lo que veo</button><button class="mini" onclick="exportRepExcel()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 4v10M8 10l4 4 4-4"/><path d="M5 19h14"/></svg> Excel de lo que veo</button></div>';
   host.innerHTML = pills + bar + (repView==='mes' ? repMonthHTML(branches) : repWeekHTML(branches));
 }
 function kpiPanel(titulo, R, sub){
@@ -1937,14 +1998,14 @@ function cmpPanel(titulo, R, Rp, etiqueta, pie){
 }
 function planPanel(plan, branchTotals, branches){
   if(!branches.some(function(b){return plan[b]>0;})) return '';
-  var out='<div class="panel"><h3>📋 Horas: presupuestado (RRHH) vs real</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Sucursal</th><th>Presup.</th><th>Real</th><th>Dif.</th></tr></thead><tbody>';
+  var out='<div class="panel"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3.2h6V5H9z"/><path d="M8.5 11h7M8.5 15h5"/></svg> Horas: presupuestado (RRHH) vs real</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Sucursal</th><th>Presup.</th><th>Real</th><th>Dif.</th></tr></thead><tbody>';
   branchTotals.forEach(function(b){ var p=plan[b.bid]||0, diff=b.horas-p; out+='<tr><td>'+branchName(b.bid)+'</td><td class="mono">'+trim(p)+'</td><td class="mono">'+trim(b.horas)+'</td><td class="mono '+(diff>0.5?'neg':'')+'">'+trim(diff)+'</td></tr>'; });
   return out+'</tbody></table></div></div>';
 }
 function baseCharts(R){
   var g='';
-  g+=chartPanel('c_ganado','💰 Ganado por sucursal', svgStacked(R.branchTotals.map(function(b){return {label:branchName(b.bid),pagado:b.pagado,pendiente:b.pendiente};})));
-  g+=chartPanel('c_horas','⏱️ Horas por sucursal', svgVBars(R.branchTotals.map(function(b){return {label:branchName(b.bid),value:b.horas,color:branchColor(b.bid)};}),'h'));
+  g+=chartPanel('c_ganado','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg> Ganado por sucursal', svgStacked(R.branchTotals.map(function(b){return {label:branchName(b.bid),pagado:b.pagado,pendiente:b.pendiente};})));
+  g+=chartPanel('c_horas','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg> Horas por sucursal', svgVBars(R.branchTotals.map(function(b){return {label:branchName(b.bid),value:b.horas,color:branchColor(b.bid)};}),'h'));
   return g;
 }
 /* ---- Tablero: POR MES ---- */
@@ -1954,12 +2015,12 @@ function repMonthHTML(branches){
   if(!R.any) return '<div class="empty">Sin datos en '+MONTHS[repYM.m]+' '+repYM.y+'.</div>';
   var pm=prevYM(repYM.y,repYM.m), Rp=computeReport(pm.y,pm.m,branches);
   var activeCount=0; branches.forEach(function(b){ activeCount+=activeEmps(b).length; });
-  var out=kpiPanel('📊 Indicadores — '+MONTHS[repYM.m]+' '+repYM.y, R,
+  var out=kpiPanel('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/><path d="M4 20h17"/></svg> Indicadores — '+MONTHS[repYM.m]+' '+repYM.y, R,
     'Activos en el sistema: '+activeCount+' · '+(branches.length>1?'todas las sucursales':branchName(branches[0])));
-  out+=cmpPanel('🔁 Comparativo con el mes anterior ('+MONTHS[pm.m]+' '+pm.y+')', R, Rp, MONTHS[pm.m].slice(0,3), '▲ subió respecto al mes pasado · ▼ bajó');
+  out+=cmpPanel('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg> Comparativo con el mes anterior ('+MONTHS[pm.m]+' '+pm.y+')', R, Rp, MONTHS[pm.m].slice(0,3), '▲ subió respecto al mes pasado · ▼ bajó');
   var g=baseCharts(R);
-  if(R.weekly.length){ g+=chartPanel('c_evo','📈 Evolución semanal', svgLines(R.weekly.map(function(w){return w.label;}),[{name:'Ganado',color:'#163832',values:R.weekly.map(function(w){return w.ganado;})},{name:'Pagado',color:'#0e7a5f',values:R.weekly.map(function(w){return w.pagado;})}])); }
-  if(R.topEmp.length){ g+=chartPanel('c_top','🏆 Top trabajadores por horas', svgHBars(R.topEmp.map(function(e){return {label:e.name,value:e.horas,color:branchColor(e.branch)};}))); }
+  if(R.weekly.length){ g+=chartPanel('c_evo','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M4 20h16"/><path d="M4 15l5-5 4 3 7-8"/></svg> Evolución semanal', svgLines(R.weekly.map(function(w){return w.label;}),[{name:'Ganado',color:'#163832',values:R.weekly.map(function(w){return w.ganado;})},{name:'Pagado',color:'#235347',values:R.weekly.map(function(w){return w.pagado;})}])); }
+  if(R.topEmp.length){ g+=chartPanel('c_top','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><path d="M10 15h4M9 20h6M12 15v5"/></svg> Top trabajadores por horas', svgHBars(R.topEmp.map(function(e){return {label:e.name,value:e.horas,color:branchColor(e.branch)};}))); }
   out+='<div class="chartgrid">'+g+'</div>';
   out+=planPanel(monthPlanned(repYM.y,repYM.m,branches), R.branchTotals, branches);
   return out;
@@ -1972,7 +2033,7 @@ function repWeekHTML(branches, forPrint){
   var sel=repWeekSel, d=parseISO(sel), sun=addDays(d,6), out='';
   branches=reportWeekBranches(sel);
   if(!forPrint){
-    out+='<div class="panel"><h3>📅 Elige la semana — '+MONTHS[repYM.m]+' '+repYM.y+'</h3>';
+    out+='<div class="panel"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg> Elige la semana — '+MONTHS[repYM.m]+' '+repYM.y+'</h3>';
     out+='<div class="setpills" style="padding-bottom:4px">'+wks.map(function(wk){
       return '<button class="'+(wk===sel?'on':'')+'" onclick="setRepWeek(\''+wk+'\')">'+wkLabel(wk)+'</button>'; }).join('')+'</div>';
     out+='<div class="note">Semana del <b>'+d.getDate()+'/'+(d.getMonth()+1)+'</b> al <b>'+sun.getDate()+'/'+(sun.getMonth()+1)+'</b> (lunes a domingo).</div></div>';
@@ -1981,12 +2042,12 @@ function repWeekHTML(branches, forPrint){
   if(!R.any) return out+'<div class="empty">Sin datos en esta semana.</div>';
   var prevWk=isoLocal(addDays(d,-7)), Rp=computeReportWeek(prevWk,branches);
   var activeCount=0; branches.forEach(function(b){ activeCount+=activeEmps(b).length; });
-  out+=kpiPanel('📊 Indicadores — semana '+wkLabel(sel), R,
+  out+=kpiPanel('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/><path d="M4 20h17"/></svg> Indicadores — semana '+wkLabel(sel), R,
     'Activos en el sistema: '+activeCount+' · '+(branches.length>1?'todas las sucursales':branchName(branches[0])));
-  out+=cmpPanel('🔁 Comparativo con la semana anterior ('+wkLabel(prevWk)+')', R, Rp, wkLabel(prevWk), '▲ subió respecto a la semana pasada · ▼ bajó');
+  out+=cmpPanel('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg> Comparativo con la semana anterior ('+wkLabel(prevWk)+')', R, Rp, wkLabel(prevWk), '▲ subió respecto a la semana pasada · ▼ bajó');
   var g=baseCharts(R);
-  g+=chartPanel('c_evo','📈 Ganado y pagado por día', svgLines(R.daily.map(function(x){return x.label;}),[{name:'Ganado',color:'#163832',values:R.daily.map(function(x){return x.ganado;})},{name:'Pagado',color:'#0e7a5f',values:R.daily.map(function(x){return x.pagado;})}]));
-  if(R.topEmp.length){ g+=chartPanel('c_top','🏆 Top trabajadores por horas', svgHBars(R.topEmp.map(function(e){return {label:e.name,value:e.horas,color:branchColor(e.branch)};}))); }
+  g+=chartPanel('c_evo','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M4 20h16"/><path d="M4 15l5-5 4 3 7-8"/></svg> Ganado y pagado por día', svgLines(R.daily.map(function(x){return x.label;}),[{name:'Ganado',color:'#163832',values:R.daily.map(function(x){return x.ganado;})},{name:'Pagado',color:'#235347',values:R.daily.map(function(x){return x.pagado;})}]));
+  if(R.topEmp.length){ g+=chartPanel('c_top','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><path d="M10 15h4M9 20h6M12 15v5"/></svg> Top trabajadores por horas', svgHBars(R.topEmp.map(function(e){return {label:e.name,value:e.horas,color:branchColor(e.branch)};}))); }
   out+='<div class="chartgrid">'+g+'</div>';
   out+=planPanel(weekPlanned(sel,branches), R.branchTotals, branches);
   return out;
@@ -1995,7 +2056,7 @@ var repCharts={};
 function chartPanel(key,title,svg){
   if(printMode) return '<div class="panel"><h3>'+title+'</h3>'+svg+'</div>';
   repCharts[key]={title:title,svg:svg};
-  return '<div class="panel chartpanel" onclick="zoomChart(\''+key+'\')"><h3>'+title+' <span class="zoomhint">🔍 ampliar</span></h3>'+svg+'</div>';
+  return '<div class="panel chartpanel" onclick="zoomChart(\''+key+'\')"><h3>'+title+' <span class="zoomhint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg> ampliar</span></h3>'+svg+'</div>';
 }
 function zoomChart(key){ var c=repCharts[key]; if(!c) return; openModal('<h3 style="margin-bottom:14px">'+c.title+'</h3>'+c.svg+'<div class="acts" style="margin-top:16px"><button class="mini" onclick="closeModal()">Cerrar</button></div>', true); }
 
@@ -2063,7 +2124,7 @@ function schedBodyHTML(id, wk, ro){
   h+='<div class="box"><div class="k">Real</div><div class="v mono">'+trim(rt)+' h</div></div>';
   h+='<div class="box"><div class="k">Diferencia</div><div class="v mono" style="color:'+((rt-pt)>0?'var(--amber)':'var(--accent)')+'">'+trim(rt-pt)+' h</div></div>';
   h+='</div>';
-  if(schedFlag(wk,id)) h+='<div class="note" style="background:#fdf0d8;color:var(--amber);border-radius:10px;padding:9px 11px;margin-top:8px;font-weight:600">⚠️ Lo real supera lo presupuestado por encima del margen. Conviene revisar.</div>';
+  if(schedFlag(wk,id)) h+='<div class="note" style="background:#fdf0d8;color:var(--amber);border-radius:10px;padding:9px 11px;margin-top:8px;font-weight:600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 3L2 20h20z"/><path d="M12 9v5M12 17h0"/></svg> Lo real supera lo presupuestado por encima del margen. Conviene revisar.</div>';
   return h;
 }
 function toggleSchedEmp(id){
@@ -2375,7 +2436,9 @@ function addUser(){
 }
 
 /* ================= NAV ================= */
+var curScr='Home';
 function showTab(scr){
+  curScr=scr;
   ['Home','Week','Cal','Month','Rep','Sched','Staff','Arq','Set'].forEach(function(s){
     document.getElementById('scr'+s).classList.toggle('on', s===scr);
   });
@@ -2392,6 +2455,7 @@ function showTab(scr){
   if(scr==='Staff') renderStaff();
   if(scr==='Arq') renderArqueos();
   if(scr==='Set') renderSettings();
+  playAnim('scr'+scr);
 }
 function renderHome(){
   var lg=document.getElementById('homeLogo'); if(lg && !lg.src) lg.src=NUM_FIRMA;
@@ -2440,7 +2504,7 @@ async function renderArqueos(){
   var arr;
   try{ arr=await loadArqSuc(arqSuc); }
   catch(e){ body.innerHTML='<div class="empty">No se pudo leer de la nube.<br>'+esc(e.message)+'</div>'; return; }
-  if(!arr.length){ body.innerHTML='<div class="empty">Esta sucursal aún no tiene arqueos registrados.</div>'; return; }
+  if(!arr.length){ body.innerHTML='<div class="empty"><img class="cl" src="assets/nummeros/clasicos/pitagoras-inventario.jpg" alt="" loading="lazy">Esta sucursal aún no tiene arqueos registrados.</div>'; return; }
   var meses=[], seen={};
   arr.forEach(function(a){ var ym=(a.fecha||'').slice(0,7); if(ym && !seen[ym]){seen[ym]=1; meses.push(ym);} });
   meses.sort().reverse();
@@ -2464,7 +2528,7 @@ function openArq(id){
   arqSel=id;
   var a=(gvCache[arqSuc]||[]).filter(function(x){return x.id===id;})[0];
   var host=document.getElementById('arqDetail'); if(!a||!host) return;
-  var h='<div class="panel"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Arqueo Nro '+esc(a.nro)+' · '+fmtDate(a.fecha)+'</h3><button class="mini" style="margin-left:auto" onclick="printArqueo(\''+a.id+'\')">🧾 PDF</button><button class="mini" onclick="emailArqueo(\''+a.id+'\')">📧 Correo</button></div>';
+  var h='<div class="panel"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Arqueo Nro '+esc(a.nro)+' · '+fmtDate(a.fecha)+'</h3><button class="mini" style="margin-left:auto" onclick="printArqueo(\''+a.id+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21z"/><path d="M9 8h6M9 12h6"/></svg> PDF</button><button class="mini" onclick="emailArqueo(\''+a.id+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg> Correo</button></div>';
   h+='<div class="note" style="margin-bottom:8px">Cajero: <b>'+esc(a.cajero)+'</b> · Turno: '+esc(a.turno||'—')+'</div>';
   h+='<div class="strip" style="margin-bottom:10px">'+statHTML('Ventas (Excel)',bs(a.ventasExcel),'g')+statHTML('Gastos',bs(a.totalGastos),'p')+statHTML('Saldo',bs(a.saldo),'s')+'</div>';
   h+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Concepto</th><th>Monto</th></tr></thead><tbody>';
@@ -2490,7 +2554,7 @@ function openArq(id){
     h+='</tbody></table></div>';
   }
   if(a.conteo){
-    h+='<div class="divider"></div><div class="note" style="font-weight:700;margin:8px 0 4px">💵 Conteo de caja</div>';
+    h+='<div class="divider"></div><div class="note" style="font-weight:700;margin:8px 0 4px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg> Conteo de caja</div>';
     h+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Denominación</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>';
     var tc=0;
     GV_DENOMS.forEach(function(dn){ var cnt=num(a.conteo[dn[0]]); if(cnt){ var st=dn[1]*cnt; tc+=st; h+='<tr><td>'+dn[2]+'</td><td class="mono">'+cnt+'</td><td class="mono">'+fmt(st)+'</td></tr>'; } });
@@ -2555,7 +2619,7 @@ function gasRowHTML(g,i){
 function arqFormHTML(){
   var d=draft;
   var sucOpts=GV_SUC.filter(function(s){return s.id!=='cine';}).map(function(s){return '<option value="'+s.id+'"'+(s.id===d.suc?' selected':'')+'>'+s.name+'</option>';}).join('');
-  var h='<div class="panel"><h3>➕ Nuevo arqueo</h3>';
+  var h='<div class="panel"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 5v14M5 12h14"/></svg> Nuevo arqueo</h3>';
   h+='<div class="arqgrid">';
   h+='<div><label>Sucursal</label><select class="fld" id="dSuc" onchange="onDraftSuc()">'+sucOpts+'</select></div>';
   h+='<div><label>Fecha</label><input class="fld" type="date" id="dFecha" value="'+d.fecha+'"></div>';
@@ -2564,16 +2628,16 @@ function arqFormHTML(){
   h+='<div><label>Turno inicio</label><input class="fld" id="dTurnoIni" value="'+esc(d.turnoIni)+'" placeholder="11:00"></div>';
   h+='<div><label>Turno fin</label><input class="fld" id="dTurnoFin" value="'+esc(d.turnoFin)+'" placeholder="22:00"></div>';
   h+='</div>';
-  h+='<div class="divider"></div><div class="note" style="font-weight:700;margin:6px 0">🧾 Comandas / órdenes</div>';
+  h+='<div class="divider"></div><div class="note" style="font-weight:700;margin:6px 0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21z"/><path d="M9 8h6M9 12h6"/></svg> Comandas / órdenes</div>';
   h+='<div style="overflow-x:auto"><table class="tbl arqin"><thead><tr><th>Marca</th><th>Canal</th><th>Monto</th><th>Comentario</th><th></th></tr></thead><tbody id="ordRows">';
   d.ordenes.forEach(function(o,i){ h+=ordRowHTML(o,i); });
-  h+='</tbody></table></div><div style="margin-top:6px"><button class="mini acc" onclick="addOrden()">➕ Agregar comanda</button></div>';
-  h+='<div class="divider"></div><div class="note" style="font-weight:700;margin:6px 0">💸 Gastos / egresos</div>';
+  h+='</tbody></table></div><div style="margin-top:6px"><button class="mini acc" onclick="addOrden()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 5v14M5 12h14"/></svg> Agregar comanda</button></div>';
+  h+='<div class="divider"></div><div class="note" style="font-weight:700;margin:6px 0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg> Gastos / egresos</div>';
   h+='<div style="overflow-x:auto"><table class="tbl arqin"><thead><tr><th>Gasto</th><th>Monto</th><th>Tipo</th><th>Recibo/Factura</th><th>Nro</th><th></th></tr></thead><tbody id="gasRows">';
   d.gastos.forEach(function(g,i){ h+=gasRowHTML(g,i); });
-  h+='</tbody></table></div><div style="margin-top:6px"><button class="mini acc" onclick="addGasto()">➕ Agregar gasto</button></div>';
+  h+='</tbody></table></div><div style="margin-top:6px"><button class="mini acc" onclick="addGasto()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 5v14M5 12h14"/></svg> Agregar gasto</button></div>';
   // conteo de caja y cuadre
-  h+='<div class="divider"></div><div class="note" style="font-weight:700;margin:6px 0">💵 Conteo de caja y cuadre</div>';
+  h+='<div class="divider"></div><div class="note" style="font-weight:700;margin:6px 0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg> Conteo de caja y cuadre</div>';
   h+='<div class="arqgrid"><div><label>Inicio caja chica</label><input class="fld mono" id="cCaja" inputmode="decimal" value="'+(d.cajaChica||'')+'" onchange="recalcArq()"></div>';
   h+='<div><label>Ventas Control Facilito</label><input class="fld mono" id="cFacil" inputmode="decimal" value="'+(d.ventasGerente||'')+'" onchange="recalcArq()"></div></div>';
   h+='<div class="conteogrid">';
@@ -2582,7 +2646,7 @@ function arqFormHTML(){
   h+='<div id="arqCuadre" style="margin-top:10px"></div>';
   h+='<div class="divider"></div><div><label>Comentarios del día</label><textarea class="fld" id="dComent" rows="2">'+esc(d.comentarios)+'</textarea></div>';
   h+='<div id="arqTotals" class="strip" style="margin-top:12px"></div>';
-  h+='<div class="payactions" style="margin-top:12px"><button class="mini acc" onclick="saveArqueo()">💾 Guardar arqueo</button><button class="mini" onclick="cancelArqueo()">Cancelar</button></div>';
+  h+='<div class="payactions" style="margin-top:12px"><button class="mini acc" onclick="saveArqueo()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/></svg> Guardar arqueo</button><button class="mini" onclick="cancelArqueo()">Cancelar</button></div>';
   h+='</div>';
   return h;
 }
@@ -2716,26 +2780,32 @@ async function saveArqueo(){
     ordenes:draft.ordenes.filter(function(o){return num(o.v)>0||o.n;}).map(function(o){ var a={}; if(num(o.v)>0) a[o.c]=num(o.v); var r={m:o.m,a:a}; if(o.n) r.n=o.n; return r; }),
     gastos:draft.gastos.filter(function(g){return g.g||num(g.t)>0;}).map(function(g){ return {g:g.g,t:num(g.t),tipo:g.tipo,doc:g.doc,docnro:g.docnro}; }),
     estado:'capturado', creadoEn:Date.now(), creadoPor:(session?session.email:'') };
+  showLoader('Guardando arqueo…'); var _ts=Date.now();
   try{
     var db=await gvReady();
     await db.collection('gvArqueos').doc(id).set(doc);
     delete gvCache[draft.suc];
+    var _l=1800-(Date.now()-_ts); if(_l>0) await sleep(_l);
+    hideLoader();
     toast('Arqueo guardado ✓');
     if(DB.config&&DB.config.gvMail&&DB.config.gvMail.url){ emailArqueoObj(doc).then(function(ok){ if(ok) toast('Correo enviado ✓'); }); }
     arqMode='list'; arqSuc=draft.suc; arqYM=draft.fecha.slice(0,7); arqSel=id; draft=null;
     renderArqueos();
-  }catch(e){ toast('No se pudo guardar: '+e.message); }
+  }catch(e){ hideLoader(); toast('No se pudo guardar: '+e.message); }
 }
 
-function onBranch(){ curBranch=document.getElementById('branchSel').value; openEmp={}; openSched={}; renderAll(); }
-function shiftWeek(n){ curMonday=addDays(curMonday,7*n); openEmp={}; openSched={}; renderWeekLabel(); renderWeek(); renderSchedule(); }
+function onBranch(){ curBranch=document.getElementById('branchSel').value; openEmp={}; openSched={};
+  withLoader('Actualizando datos…', function(){ renderAll(); }, 1800).then(function(){ playAnim(curScr?('scr'+curScr):null); }); }
+function shiftWeek(n){ curMonday=addDays(curMonday,7*n); openEmp={}; openSched={};
+  withLoader('Cargando la semana…', function(){ renderWeekLabel(); renderWeek(); renderSchedule(); }, 1500).then(function(){ playAnim('scrWeek'); }); }
 
 /* ================= RESPALDO ================= */
 function exportData(){
-  var blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='control-horas-'+today()+'.json'; a.click();
-  toast('Datos exportados');
+  withLoader('Preparando respaldo…', function(){
+    var blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='control-horas-'+today()+'.json'; a.click();
+  }, 1500).then(function(){ toast('Datos exportados'); });
 }
 function importData(ev){
   var f=ev.target.files[0]; if(!f) return;
