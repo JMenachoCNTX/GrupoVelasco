@@ -562,7 +562,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v35';
+var APP_VERSION = 'v36';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -2448,7 +2448,7 @@ function openArq(id){
   arqSel=id;
   var a=(gvCache[arqSuc]||[]).filter(function(x){return x.id===id;})[0];
   var host=document.getElementById('arqDetail'); if(!a||!host) return;
-  var h='<div class="panel"><h3>Arqueo Nro '+esc(a.nro)+' · '+fmtDate(a.fecha)+'</h3>';
+  var h='<div class="panel"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Arqueo Nro '+esc(a.nro)+' · '+fmtDate(a.fecha)+'</h3><button class="mini" style="margin-left:auto" onclick="printArqueo(\''+a.id+'\')">🧾 PDF</button></div>';
   h+='<div class="note" style="margin-bottom:8px">Cajero: <b>'+esc(a.cajero)+'</b> · Turno: '+esc(a.turno||'—')+'</div>';
   h+='<div class="strip" style="margin-bottom:10px">'+statHTML('Ventas (Excel)',bs(a.ventasExcel),'g')+statHTML('Gastos',bs(a.totalGastos),'p')+statHTML('Saldo',bs(a.saldo),'s')+'</div>';
   h+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Concepto</th><th>Monto</th></tr></thead><tbody>';
@@ -2615,6 +2615,51 @@ function recalcArq(){
   }
 }
 function cancelArqueo(){ arqMode='list'; draft=null; renderArqueos(); }
+function gvSucName(id){ var s=GV_SUC.filter(function(x){return x.id===id;})[0]; return s?s.name:id; }
+function printArqueo(id){
+  var a=(gvCache[arqSuc]||[]).filter(function(x){return x.id===id;})[0]; if(!a) return;
+  var sub='Sucursal: '+gvSucName(a.suc)+' · Arqueo Nro '+esc(a.nro)+' · Fecha: '+fullDate(a.fecha);
+  var h=pdfLogoHead('REPORTE DE CIERRE DE CAJA', sub);
+  h+='<div class="cap">Datos del arqueo</div><table><tbody>';
+  h+='<tr><td>Nro de arqueo</td><td>'+esc(a.nro)+'</td></tr><tr><td>Fecha</td><td>'+fullDate(a.fecha)+'</td></tr>';
+  h+='<tr><td>Sucursal</td><td>'+gvSucName(a.suc)+'</td></tr><tr><td>Cajero</td><td>'+esc(a.cajero)+'</td></tr>';
+  h+='<tr><td>Turno</td><td>'+esc(a.turno||'—')+'</td></tr>';
+  if(a.conteo&&a.conteo.cajaChica) h+='<tr><td>Inicio caja chica</td><td>'+fmt(a.conteo.cajaChica)+'</td></tr>';
+  h+='</tbody></table>';
+  h+='<div class="cap">Reporte de Ventas</div><table><tbody>';
+  [['PedidosYa — Efectivo',a.tEfectivoPeya],['PedidosYa — Online',a.tOnlinePeya],['Vouchers',a.tVouchers],['Dscto Promo',a.tDsctoPromo],['Otros Dsctos',a.tOtrosDsctos],['Yango',a.ventasYango],['Local — Efectivo',a.tEfectivoLocal],['Local — POS',a.tTarjetaLocal],['Local — QR',a.tTransfQR]].forEach(function(f){ h+='<tr><td>'+f[0]+'</td><td>'+fmt(f[1])+'</td></tr>'; });
+  h+='<tr class="tot"><td>Ventas por PedidosYa</td><td>'+fmt(a.ventasPeya)+'</td></tr>';
+  h+='<tr class="tot"><td>Ventas por Local</td><td>'+fmt(a.ventasLocal)+'</td></tr>';
+  h+='<tr class="tot"><td>Ventas por Yango</td><td>'+fmt(a.ventasYango)+'</td></tr>';
+  h+='<tr class="tot"><td>Ventas según Excel</td><td>'+fmt(a.ventasExcel)+'</td></tr>';
+  if(num(a.ventasGerente)){ h+='<tr><td>Ventas Control Facilito</td><td>'+fmt(a.ventasGerente)+'</td></tr><tr><td>Diferencia (Excel − Facilito)</td><td>'+fmt(a.ventasExcel-a.ventasGerente)+'</td></tr>'; }
+  h+='<tr class="tot"><td>Total Gastos</td><td>'+fmt(a.totalGastos)+'</td></tr></tbody></table>';
+  if((a.ordenes||[]).length){
+    h+='<div class="cap">Detalle de órdenes ('+a.ordenes.length+')</div><table><thead><tr><th>#</th><th>Marca</th><th>Canal</th><th>Monto</th><th>Comentario</th></tr></thead><tbody>';
+    a.ordenes.forEach(function(o,i){ var cs=Object.keys(o.a||{}); if(!cs.length){ h+='<tr><td>'+(i+1)+'</td><td>'+esc(o.m)+'</td><td>—</td><td>0</td><td>'+esc(o.n||'')+'</td></tr>'; } cs.forEach(function(c){ h+='<tr><td>'+(i+1)+'</td><td>'+esc(o.m)+'</td><td>'+(GV_CANAL[c]||c)+'</td><td>'+fmt(o.a[c])+'</td><td>'+esc(o.n||'')+'</td></tr>'; }); });
+    h+='</tbody></table>';
+  }
+  if(a.conteo){
+    h+='<div class="cap">Conteo de caja</div><table><thead><tr><th>Denominación</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>';
+    var tc=0; GV_DENOMS.forEach(function(dn){ var cnt=num(a.conteo[dn[0]]); if(cnt){ var st=dn[1]*cnt; tc+=st; h+='<tr><td>'+dn[2]+'</td><td>'+cnt+'</td><td>'+fmt(st)+'</td></tr>'; } });
+    h+='<tr class="tot"><td>Total contado</td><td></td><td>'+fmt(tc)+'</td></tr>';
+    if(a.conteo.cajaChica) h+='<tr><td>(−) Inicio caja chica</td><td></td><td>'+fmt(a.conteo.cajaChica)+'</td></tr>';
+    h+='<tr class="tot"><td>Dinero en sobre</td><td></td><td>'+fmt(a.sobre)+'</td></tr></tbody></table>';
+  }
+  if((a.gastos||[]).length){
+    h+='<div class="cap">Egresos / Gastos</div><table><thead><tr><th>Gasto</th><th>Tipo</th><th>Doc</th><th>Monto</th></tr></thead><tbody>';
+    a.gastos.forEach(function(x){ h+='<tr><td>'+esc(x.g)+'</td><td>'+esc(x.tipo||'')+'</td><td>'+esc(((x.doc||'')+' '+(x.docnro||'')).trim())+'</td><td>'+fmt(x.t)+'</td></tr>'; });
+    h+='<tr class="tot"><td>Total gastos</td><td></td><td></td><td>'+fmt(a.totalGastos)+'</td></tr></tbody></table>';
+  }
+  if(a.conteo){
+    var est=Math.abs(num(a.difArqueo))<0.01?'CUADRADO':(num(a.difArqueo)>0?'SOBRANTE':'FALTANTE');
+    h+='<div class="cap">Cuadre</div><table><tbody>';
+    h+='<tr><td>Efectivo esperado</td><td>'+fmt(a.saldo)+'</td></tr><tr><td>Dinero en sobre (contado)</td><td>'+fmt(a.sobre)+'</td></tr>';
+    h+='<tr class="tot"><td>Diferencia — '+est+'</td><td>'+fmt(a.difArqueo)+'</td></tr></tbody></table>';
+  }
+  if(a.comentarios) h+='<div class="cap">Comentarios del día</div><div style="font-size:12px">'+esc(a.comentarios)+'</div>';
+  openPrint('Arqueo '+a.nro+' — '+gvSucName(a.suc), h);
+}
 async function saveArqueo(){
   readDraft();
   if(!draft.suc){ toast('Elige la sucursal'); return; }
