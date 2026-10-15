@@ -145,8 +145,13 @@
   .chartpanel:hover{box-shadow:0 2px 4px rgba(18,32,54,.1),0 10px 26px rgba(18,32,54,.1)}
   .zoomhint{font-size:11px; color:var(--muted); font-weight:500}
   .staffgrid{display:grid; grid-template-columns:repeat(auto-fill, minmax(270px, 1fr)); gap:9px; align-items:start; margin-bottom:4px}
-  .staffitem{display:flex; gap:8px; align-items:center; background:var(--field); border:1px solid var(--line); border-radius:11px; padding:8px 9px}
+  .staffitem{display:flex; gap:8px; align-items:center; background:var(--field); border:1px solid var(--line); border-radius:11px; padding:8px 9px; flex-wrap:wrap}
   .staffitem .fld{flex:1; min-width:0}
+  .staffitem.warn{border-color:var(--amber)}
+  .staffitem .nmfields{display:flex; gap:7px; flex:1; min-width:150px}
+  .staffitem .nmfields .fld{flex:1; min-width:0}
+  .staffitem .nmctrl{display:flex; gap:7px; align-items:center; flex-wrap:wrap}
+  .fld.needap{border-color:var(--amber); background:var(--warnbg)}
   .setpills{display:flex; gap:7px; overflow-x:auto; padding:2px 0 12px; -webkit-overflow-scrolling:touch}
   .arqgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
   .arqgrid label{display:block; font-size:11px; color:var(--muted); font-weight:700; margin-bottom:3px}
@@ -420,7 +425,6 @@
           <img class="heroPic" src="assets/nummeros/clasicos/los-tres-reunion.jpg" alt="Los clásicos de NUMMEROS" loading="lazy">
         </div>
       </div>
-      <div class="tiles" id="homeTiles"></div>
       <div class="homefoot">NUMMEROS <span>by</span> CONTAX · Versión <span id="homeVer">—</span></div>
     </section>
 
@@ -503,10 +507,11 @@
         <div id="staffList"></div>
         <div class="addbar" id="addEmpBar">
           <select id="newEmpBranch" class="fld" style="max-width:130px;display:none"></select>
-          <input id="newEmp" class="fld" placeholder="Nombre del trabajador">
+          <input id="newEmpNombre" class="fld" placeholder="NOMBRE" style="text-transform:uppercase" oninput="this.value=normName(this.value)">
+          <input id="newEmpApellido" class="fld" placeholder="APELLIDO" style="text-transform:uppercase" oninput="this.value=normName(this.value)">
           <button class="mini acc" onclick="addEmp()">Agregar</button>
         </div>
-        <div class="note" style="margin-top:10px">Desactivar oculta a la persona de las semanas nuevas sin borrar su historial.</div>
+        <div class="note" style="margin-top:10px">Escribe <b>NOMBRE</b> y <b>APELLIDO</b> por separado (todo en mayúscula y sin tildes). Desactivar oculta a la persona de las semanas nuevas sin borrar su historial.</div>
       </div>
     </section>
 
@@ -674,7 +679,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v40';
+var APP_VERSION = 'v41';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -817,7 +822,8 @@ function defaultDB(){
   var order=0;
   BRANCHES.forEach(function(b){
     (seed[b.id]||[]).forEach(function(nm){
-      var id=uid(); db.employees[id]={name:nm, branch:b.id, active:true, order:order++};
+      var _n=normName(nm), _tk=_n?_n.split(' '):[], _ap=(_tk.length>=2?_tk[_tk.length-1]:''), _no=(_tk.length>=2?_tk.slice(0,_tk.length-1).join(' '):_n);
+      var id=uid(); db.employees[id]={nombre:_no, apellido:_ap, name:(_no+' '+_ap).trim(), branch:b.id, active:true, order:order++};
     });
   });
   return db;
@@ -836,6 +842,23 @@ function migrateUsers(){
   try{ ensureBranches(); }catch(e){}
   try{ ensureRateHist(); }catch(e){}
   try{ migrateWeeks(); }catch(e){}
+  try{ migrateEmployees(); }catch(e){}
+}
+/* Pasa los empleados a NOMBRE + APELLIDO en mayúscula y sin tildes.
+   Los de una sola palabra quedan sin apellido (bloqueados hasta completarlo). */
+function migrateEmployees(){
+  if(!DB || !DB.employees) return;
+  Object.keys(DB.employees).forEach(function(id){
+    var e=DB.employees[id]; if(!e) return;
+    if(e.nombre!=null || e.apellido!=null){
+      e.nombre=normName(e.nombre||''); e.apellido=normName(e.apellido||'');
+    } else {
+      var norm=normName(e.name||''); var tk=norm?norm.split(' '):[];
+      if(tk.length>=2){ e.apellido=tk[tk.length-1]; e.nombre=tk.slice(0,tk.length-1).join(' '); }
+      else { e.nombre=norm; e.apellido=''; }
+    }
+    e.name=empName(e);
+  });
 }
 function migrateWeeks(){
   if(!DB || !DB.weeks) return;
@@ -1124,7 +1147,7 @@ function empCardHTML(id, entry, c, wk){
   var isOpen=!!openEmp[id];
   var html='<div class="empcard'+(isOpen?' open':'')+'" id="card_'+id+'">';
   html+='<div class="emphead" onclick="toggleEmp(\''+id+'\')">';
-  html+='<div><div class="nm">'+esc(emp.name)+'</div><div class="meta">'+c.hrs.toFixed(1).replace('.',',')+' h · '+c.ext.toFixed(1).replace('.',',')+' extra</div></div>';
+  html+='<div><div class="nm">'+esc(empName(emp))+(needsApellido(emp)?' <span class="tag" style="background:var(--warnbg);color:var(--amber)">falta apellido</span>':'')+'</div><div class="meta">'+c.hrs.toFixed(1).replace('.',',')+' h · '+c.ext.toFixed(1).replace('.',',')+' extra</div></div>';
   html+='<div class="right"><div class="saldo mono">'+bs(c.saldo)+'</div>'+badgeHTML(c.estado)+'</div>';
   html+='<span class="chev">›</span></div>';
 
@@ -1136,6 +1159,13 @@ function empCardHTML(id, entry, c, wk){
 function empBodyHTML(id, entry, c, wk){
   var ent=getEntry(wk,id,false);
   var r=c.r, re=c.re, admin=isAdmin(), editor=canEdit(), roleRO=!editor;
+  var _emp=DB.employees[id];
+  if(needsApellido(_emp)){
+    return '<div class="note" style="background:var(--warnbg);color:var(--amber);border-radius:10px;padding:12px 13px;font-weight:600">'
+      +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 3L2 20h20z"/><path d="M12 9v5M12 17h0"/></svg> Falta el <b>APELLIDO</b> de esta persona. No se pueden registrar horas hasta completarlo.'
+      +(canEdit()?'<div style="margin-top:9px"><button class="mini acc" onclick="showTab(\'Staff\')">Completar en Personal</button></div>':'')
+      +'</div>';
+  }
   var weekPaid = c.estado==='PAGADO';
   var h='<div class="ratebadge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg> Tarifa esta semana: <b>Normal Bs '+trim(r)+'/h</b> · <b>Extra Bs '+trim(re)+'/h</b></div>';
   h+='<div class="drow head"><span></span><span>Horas</span><span>Extras</span><span>Desc. Bs</span><span>Total</span></div>';
@@ -1254,6 +1284,15 @@ function payAllDays(id){
 function trim(n){ return (Math.round(n*100)/100).toString().replace('.',','); }
 function fmtDate(s){ if(!s) return ''; var d=parseISO(s); return pad(d.getDate())+'/'+pad(d.getMonth()+1); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+/* Normaliza nombres: MAYÚSCULAS, sin tildes/diacríticos, espacios colapsados */
+function normName(s){
+  s=String(s==null?'':s);
+  try{ s=s.normalize('NFD').replace(/[̀-ͯ]/g,''); }catch(e){}
+  return s.toUpperCase().replace(/\s+/g,' ').trim();
+}
+/* Nombre completo para mostrar/reportar */
+function empName(e){ if(!e) return ''; var n=(e.nombre||'').trim(), a=(e.apellido||'').trim(); var full=(n+' '+a).trim(); return full || (e.name||''); }
+function needsApellido(e){ return !e || !((e.apellido||'').trim()); }
 
 /* --------- interacciones semana --------- */
 function toggleEmp(id){
@@ -1269,6 +1308,7 @@ function toggleEmp(id){
 }
 function setCell(id, dayIdx, field, val){
   if(!canEditDay(id,dayIdx)) return;
+  if(needsApellido(DB.employees[id])){ toast('Completa el APELLIDO en Personal'); return; }
   var wk=weekKey(curMonday);
   var entry=getEntry(wk,id,true);
   var v=num(val), lim=getLimits(), clamped=false;
@@ -2180,7 +2220,7 @@ function zoomChart(key){ var c=repCharts[key]; if(!c) return; openModal('<h3 sty
 /* ================= RENDER: HORARIOS (RRHH) ================= */
 var openSched={};
 function branchIdByName(name){ name=String(name==null?'':name).trim().toLowerCase(); for(var i=0;i<BRANCHES.length;i++) if(BRANCHES[i].name.toLowerCase()===name) return BRANCHES[i].id; return null; }
-function empIdByName(bid,name){ name=String(name==null?'':name).trim().toLowerCase(); var ids=Object.keys(DB.employees); for(var i=0;i<ids.length;i++){ var e=DB.employees[ids[i]]; if(e.branch===bid && String(e.name).trim().toLowerCase()===name) return ids[i]; } return null; }
+function empIdByName(bid,name){ name=normName(name); var ids=Object.keys(DB.employees); for(var i=0;i<ids.length;i++){ var e=DB.employees[ids[i]]; if(e.branch===bid && normName(empName(e))===name) return ids[i]; } return null; }
 function schedFlag(wk,id){
   var cfg=schedAlertCfg(); var s=getSched(wk,id); if(!s) return false;
   var e=getEntry(wk,id,false); var pt=0,rt=0,dayOver=false;
@@ -2349,11 +2389,16 @@ function renderStaff(){
     if(!ids.length){ h+='<div class="note">Sin personal.</div>'; return; }
     h+='<div class="staffgrid">';
     ids.forEach(function(id){
-      var e=DB.employees[id];
-      h+='<div class="staffitem">';
-      h+='<input class="fld grow" value="'+esc(e.name)+'"'+(ro?' disabled':'')+' onchange="renameEmp(\''+id+'\',this.value)" '+(e.active?'':'style="opacity:.55"')+'>';
-      h+= ro ? '<span class="tag">'+(e.active?'Activo':'Inactivo')+'</span>' : '<button class="mini" onclick="toggleActive(\''+id+'\')">'+(e.active?'Activo':'Inactivo')+'</button>';
+      var e=DB.employees[id]; var falta=needsApellido(e);
+      h+='<div class="staffitem'+(falta?' warn':'')+'"'+(e.active?'':' style="opacity:.6"')+'>';
+      h+='<div class="nmfields">';
+      h+='<input class="fld" style="text-transform:uppercase" value="'+esc(e.nombre||'')+'"'+(ro?' disabled':'')+' placeholder="NOMBRE" oninput="this.value=normName(this.value)" onchange="setEmpNombre(\''+id+'\',this.value)">';
+      h+='<input class="fld'+(falta?' needap':'')+'" style="text-transform:uppercase" value="'+esc(e.apellido||'')+'"'+(ro?' disabled':'')+' placeholder="APELLIDO" oninput="this.value=normName(this.value)" onchange="setEmpApellido(\''+id+'\',this.value)">';
       h+='</div>';
+      h+='<div class="nmctrl">';
+      if(falta) h+='<span class="tag" style="background:var(--warnbg);color:var(--amber)">Falta apellido</span>';
+      h+= ro ? '<span class="tag">'+(e.active?'Activo':'Inactivo')+'</span>' : '<button class="mini" onclick="toggleActive(\''+id+'\')">'+(e.active?'Activo':'Inactivo')+'</button>';
+      h+='</div></div>';
     });
     h+='</div>';
   });
@@ -2365,16 +2410,20 @@ function renderStaff(){
 }
 function addEmp(){
   if(!canEdit()) return;
-  var nm=document.getElementById('newEmp').value.trim();
-  if(!nm){ toast('Escribe un nombre'); return; }
+  var no=normName(document.getElementById('newEmpNombre').value);
+  var ap=normName(document.getElementById('newEmpApellido').value);
+  if(!no){ toast('Escribe el NOMBRE'); return; }
+  if(!ap){ toast('Escribe el APELLIDO (obligatorio)'); return; }
   var bid = curBranch==='all' ? (document.getElementById('newEmpBranch').value||'cine') : curBranch;
   var maxO=0; Object.keys(DB.employees).forEach(function(id){ maxO=Math.max(maxO,DB.employees[id].order||0); });
-  DB.employees[uid()]={name:nm, branch:bid, active:true, order:maxO+1};
-  document.getElementById('newEmp').value='';
+  DB.employees[uid()]={nombre:no, apellido:ap, name:(no+' '+ap).trim(), branch:bid, active:true, order:maxO+1};
+  document.getElementById('newEmpNombre').value=''; document.getElementById('newEmpApellido').value='';
   saveLocal(); renderStaff(); renderWeek();
   toast('Trabajador agregado');
 }
-function renameEmp(id,val){ if(!canEdit())return; val=val.trim(); if(val){ DB.employees[id].name=val; saveLocal(); renderWeek(); renderMonth(); } }
+function setEmpNombre(id,val){ if(!canEdit())return; var e=DB.employees[id]; if(!e)return; e.nombre=normName(val); e.name=empName(e); saveLocal(); renderWeek(); renderMonth(); }
+function setEmpApellido(id,val){ if(!canEdit())return; var e=DB.employees[id]; if(!e)return; e.apellido=normName(val); e.name=empName(e); saveLocal(); renderStaff(); renderWeek(); renderMonth(); }
+function renameEmp(id,val){ if(!canEdit())return; var e=DB.employees[id]; if(!e)return; var n=normName(val); var tk=n?n.split(' '):[]; if(tk.length>=2){e.apellido=tk[tk.length-1];e.nombre=tk.slice(0,tk.length-1).join(' ');}else{e.nombre=n;} e.name=empName(e); saveLocal(); renderWeek(); renderMonth(); }
 function toggleActive(id){ if(!canEdit())return; DB.employees[id].active=!DB.employees[id].active; saveLocal(); renderStaff(); renderWeek(); }
 
 /* ================= RENDER: AJUSTES ================= */
@@ -2589,22 +2638,6 @@ function renderHome(){
   var v=document.getElementById('homeVer'); if(v) v.textContent=APP_VERSION;
   var hi=document.getElementById('homeHello');
   if(hi && session){ var hr=new Date().getHours(); var saludo=hr<12?'Buenos días':(hr<19?'Buenas tardes':'Buenas noches'); hi.textContent=saludo+', '+(session.name || session.email.split('@')[0])+'.'; }
-  var t=document.getElementById('homeTiles'); if(!t) return;
-  var adm=isAdmin();
-  var items=[
-    {k:'week',  t:'Semana',     s:'Registrar horas y pagos', on:true},
-    {k:'arq',   t:'Arqueos',    s:'Cierres de caja GV',      on:adm},
-    {k:'rep',   t:'Tablero',    s:'Indicadores y gráficos',  on:true},
-    {k:'month', t:'Resumen',    s:'Por mes y por semana',    on:true},
-    {k:'cal',   t:'Calendario', s:'Vista día / semana / mes',on:true},
-    {k:'staff', t:'Personal',   s:'Trabajadores por sucursal',on:true},
-    {k:'sched', t:'Horarios',   s:'Presupuesto de horas',    on:adm},
-    {k:'set',   t:'Ajustes',    s:'Tarifas, accesos, tema',  on:true}
-  ];
-  var tabOf={week:'Week',arq:'Arq',rep:'Rep',month:'Month',cal:'Cal',staff:'Staff',sched:'Sched',set:'Set'};
-  t.innerHTML=items.filter(function(it){return it.on;}).map(function(it){
-    return '<div class="tile" onclick="showTab(\''+tabOf[it.k]+'\')"><div class="tic">'+HOME_IC[it.k]+'</div><b>'+it.t+'</b><span>'+it.s+'</span></div>';
-  }).join('');
 }
 /* ================= ARQUEOS (GrupoVelasco · solo admin · lectura) ================= */
 var GV_SUC=[{id:'equipetrol_mp',name:'Equipetrol–Memphis'},{id:'equipetrol_sf',name:'Equipetrol–SushiFlash'},{id:'sarao',name:'Sarao'},{id:'cine',name:'Cine (cerrada)'}];
