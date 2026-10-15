@@ -486,6 +486,18 @@
         <div class="note">Sistema desarrollado para CONTAX · Moneda: Bolivianos (Bs). Los pagos se registran por día; el saldo de la semana se paga (aprox.) el jueves siguiente. · Versión <span id="verLabel">—</span></div>
       </div>
     </section>
+
+    <!-- ARQUEOS (solo admin) -->
+    <section id="scrArq" class="scr">
+      <div class="panel">
+        <h3>🧾 Arqueos — GrupoVelasco</h3>
+        <div class="note" style="margin-bottom:8px">Historial de cierres de caja (desde 2026). Elige la sucursal y el mes.</div>
+        <div class="setpills" id="arqSucPills"></div>
+        <div class="setpills" id="arqMesPills"></div>
+      </div>
+      <div class="strip" id="arqStrip"></div>
+      <div id="arqBody"><div class="empty">Cargando…</div></div>
+    </section>
   </main>
 
   <nav class="tabs" id="tabs">
@@ -496,6 +508,7 @@
     <button data-scr="Rep" onclick="showTab('Rep')"><span class="ic">📈</span>Tablero</button>
     <button data-scr="Sched" id="tabSched" onclick="showTab('Sched')" style="display:none"><span class="ic">📋</span>Horarios</button>
     <button data-scr="Staff" onclick="showTab('Staff')"><span class="ic">👥</span>Personal</button>
+    <button data-scr="Arq" id="tabArq" onclick="showTab('Arq')" style="display:none"><span class="ic">🧾</span>Arqueos</button>
     <button data-scr="Set" onclick="showTab('Set')"><span class="ic">⚙️</span>Ajustes</button>
   </nav>
 </div>
@@ -536,7 +549,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v32';
+var APP_VERSION = 'v33';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -755,6 +768,7 @@ function startApp(){
 
   document.getElementById('adminBox').style.display = isAdmin() ? 'block' : 'none';
   var ts=document.getElementById('tabSched'); if(ts) ts.style.display = canEditSchedule() ? '' : 'none';
+  var ta=document.getElementById('tabArq'); if(ta) ta.style.display = isAdmin() ? '' : 'none';
   document.getElementById('monthPick').value = isoLocal(curMonday).slice(0,7);
 
   maybeAutoConnect();
@@ -2334,7 +2348,7 @@ function addUser(){
 
 /* ================= NAV ================= */
 function showTab(scr){
-  ['Home','Week','Cal','Month','Rep','Sched','Staff','Set'].forEach(function(s){
+  ['Home','Week','Cal','Month','Rep','Sched','Staff','Arq','Set'].forEach(function(s){
     document.getElementById('scr'+s).classList.toggle('on', s===scr);
   });
   document.querySelectorAll('#tabs button').forEach(function(btn){
@@ -2348,6 +2362,7 @@ function showTab(scr){
   if(scr==='Rep') renderReports();
   if(scr==='Sched') renderSchedule();
   if(scr==='Staff') renderStaff();
+  if(scr==='Arq') renderArqueos();
   if(scr==='Set') renderSettings();
 }
 function renderHome(){
@@ -2356,6 +2371,104 @@ function renderHome(){
   var hi=document.getElementById('homeHello');
   if(hi && session){ hi.textContent='Bienvenido, '+(session.name || session.email.split('@')[0])+'.'; }
 }
+/* ================= ARQUEOS (GrupoVelasco · solo admin · lectura) ================= */
+var GV_SUC=[{id:'equipetrol_mp',name:'Equipetrol–Memphis'},{id:'equipetrol_sf',name:'Equipetrol–SushiFlash'},{id:'sarao',name:'Sarao'},{id:'cine',name:'Cine (cerrada)'}];
+var GV_CANAL={peya_efe:'PeYa Efectivo',peya_onl:'PeYa Online',peya_vou:'Voucher',peya_promo:'Dscto Promo',peya_otros:'Otros Dsctos',yango:'Yango',loc_efe:'Local Efectivo',loc_pos:'POS',loc_qr:'QR'};
+var arqSuc=null, arqYM=null, arqSel=null, gvCache={};
+async function gvReady(){
+  await ensureFirebase();
+  if(!firebase.apps.length){ var cfg=parseFirebaseConfig(BUILTIN_CLOUD.cfg); if(cfg) firebase.initializeApp(cfg); }
+  return firebase.firestore();
+}
+async function loadArqSuc(suc){
+  if(gvCache[suc]) return gvCache[suc];
+  var db=await gvReady();
+  var snap=await db.collection('gvArqueos').where('suc','==',suc).get();
+  var arr=[]; snap.forEach(function(d){ arr.push(d.data()); });
+  arr.sort(function(a,b){ return a.fecha<b.fecha?1:(a.fecha>b.fecha?-1:(parseInt(b.nro||0)-parseInt(a.nro||0))); });
+  gvCache[suc]=arr; return arr;
+}
+function setArqSuc(s){ arqSuc=s; arqYM=null; arqSel=null; renderArqueos(); }
+function setArqMes(ym){ arqYM=ym; arqSel=null; renderArqueos(); }
+async function renderArqueos(){
+  if(!document.getElementById('arqBody')) return;
+  if(!arqSuc) arqSuc=GV_SUC[0].id;
+  document.getElementById('arqSucPills').innerHTML = GV_SUC.map(function(s){
+    return '<button class="'+(s.id===arqSuc?'on':'')+'" onclick="setArqSuc(\''+s.id+'\')">'+s.name+'</button>'; }).join('');
+  var body=document.getElementById('arqBody');
+  body.innerHTML='<div class="empty">Cargando arqueos…</div>';
+  document.getElementById('arqMesPills').innerHTML=''; document.getElementById('arqStrip').innerHTML='';
+  var arr;
+  try{ arr=await loadArqSuc(arqSuc); }
+  catch(e){ body.innerHTML='<div class="empty">No se pudo leer de la nube.<br>'+esc(e.message)+'</div>'; return; }
+  if(!arr.length){ body.innerHTML='<div class="empty">Esta sucursal aún no tiene arqueos registrados.</div>'; return; }
+  var meses=[], seen={};
+  arr.forEach(function(a){ var ym=(a.fecha||'').slice(0,7); if(ym && !seen[ym]){seen[ym]=1; meses.push(ym);} });
+  meses.sort().reverse();
+  if(!arqYM || meses.indexOf(arqYM)<0) arqYM=meses[0];
+  document.getElementById('arqMesPills').innerHTML = meses.map(function(ym){
+    var p=ym.split('-'); var lbl=MONTHS[parseInt(p[1])-1]+' '+p[0];
+    return '<button class="'+(ym===arqYM?'on':'')+'" onclick="setArqMes(\''+ym+'\')">'+lbl+'</button>'; }).join('');
+  var mes=arr.filter(function(a){ return (a.fecha||'').slice(0,7)===arqYM; });
+  var vE=0,g=0; mes.forEach(function(a){ vE+=a.ventasExcel||0; g+=a.totalGastos||0; });
+  document.getElementById('arqStrip').innerHTML = statHTML('Arqueos',mes.length,'g')+statHTML('Ventas (Excel)',bs(vE),'p')+statHTML('Gastos',bs(g),'s');
+  if(arqSel && !mes.some(function(a){return a.id===arqSel;})) arqSel=null;
+  var h='<div class="panel"><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Fecha</th><th>Nro</th><th>Cajero</th><th>Turno</th><th>Ventas</th><th>Gastos</th><th>Saldo</th><th>Dif.</th></tr></thead><tbody>';
+  mes.forEach(function(a){
+    h+='<tr style="cursor:pointer" onclick="openArq(\''+a.id+'\')"><td>'+fmtDate(a.fecha)+'</td><td>'+esc(a.nro)+'</td><td>'+esc(a.cajero)+'</td><td>'+esc(a.turno||'')+'</td><td class="mono">'+fmt(a.ventasExcel)+'</td><td class="mono">'+fmt(a.totalGastos)+'</td><td class="mono">'+fmt(a.saldo)+'</td><td class="mono">'+fmt(a.difArqueo)+'</td></tr>';
+  });
+  h+='</tbody></table></div></div><div id="arqDetail"></div>';
+  body.innerHTML=h;
+  if(arqSel) openArq(arqSel);
+}
+function openArq(id){
+  arqSel=id;
+  var a=(gvCache[arqSuc]||[]).filter(function(x){return x.id===id;})[0];
+  var host=document.getElementById('arqDetail'); if(!a||!host) return;
+  var h='<div class="panel"><h3>Arqueo Nro '+esc(a.nro)+' · '+fmtDate(a.fecha)+'</h3>';
+  h+='<div class="note" style="margin-bottom:8px">Cajero: <b>'+esc(a.cajero)+'</b> · Turno: '+esc(a.turno||'—')+'</div>';
+  h+='<div class="strip" style="margin-bottom:10px">'+statHTML('Ventas (Excel)',bs(a.ventasExcel),'g')+statHTML('Gastos',bs(a.totalGastos),'p')+statHTML('Saldo',bs(a.saldo),'s')+'</div>';
+  h+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Concepto</th><th>Monto</th></tr></thead><tbody>';
+  [['Ventas PedidosYa',a.ventasPeya],['Ventas Local',a.ventasLocal],['Ventas Yango',a.ventasYango],
+   ['— Efectivo PeYa',a.tEfectivoPeya],['— Online PeYa',a.tOnlinePeya],['— Vouchers',a.tVouchers],['— Dscto Promo',a.tDsctoPromo],['— Otros Dsctos',a.tOtrosDsctos],
+   ['— Efectivo Local',a.tEfectivoLocal],['— Tarjeta Local',a.tTarjetaLocal],['— Transf./QR Local',a.tTransfQR],
+   ['Dinero en Sobre',a.sobre],['Diferencia Arqueo',a.difArqueo]].forEach(function(f){ h+='<tr><td>'+f[0]+'</td><td class="mono">'+fmt(f[1])+'</td></tr>'; });
+  h+='</tbody></table></div>';
+  var marcas={};
+  (a.ordenes||[]).forEach(function(o){ var m=o.m||'(sin marca)'; marcas[m]=marcas[m]||{n:0,v:0}; marcas[m].n++; for(var k in (o.a||{})){ marcas[m].v+=o.a[k]; } });
+  var mk=Object.keys(marcas);
+  if(mk.length){
+    h+='<div class="divider"></div><div class="note" style="font-weight:700;margin:8px 0 4px">Órdenes por marca ('+(a.ordenes||[]).length+')</div>';
+    h+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Marca</th><th>Órdenes</th><th>Monto</th></tr></thead><tbody>';
+    mk.sort(function(x,y){return marcas[y].v-marcas[x].v;}).forEach(function(m){ h+='<tr><td>'+esc(m)+'</td><td class="mono">'+marcas[m].n+'</td><td class="mono">'+fmt(marcas[m].v)+'</td></tr>'; });
+    h+='</tbody></table></div>';
+    h+='<div style="margin-top:8px"><button class="mini" onclick="toggleArqOrders(\''+a.id+'\')">Ver/ocultar detalle de órdenes</button></div><div id="arqOrders" style="display:none"></div>';
+  }
+  if((a.gastos||[]).length){
+    h+='<div class="divider"></div><div class="note" style="font-weight:700;margin:8px 0 4px">Gastos ('+a.gastos.length+')</div>';
+    h+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Gasto</th><th>Tipo</th><th>Doc</th><th>Monto</th></tr></thead><tbody>';
+    a.gastos.forEach(function(x){ h+='<tr><td>'+esc(x.g)+'</td><td>'+esc(x.tipo||'')+'</td><td>'+esc(((x.doc||'')+' '+(x.docnro||'')).trim())+'</td><td class="mono">'+fmt(x.t)+'</td></tr>'; });
+    h+='</tbody></table></div>';
+  }
+  if(a.comentarios){ h+='<div class="note" style="margin-top:10px;background:var(--chip);border-radius:10px;padding:9px 11px"><b>Comentarios:</b> '+esc(a.comentarios)+'</div>'; }
+  h+='</div>';
+  host.innerHTML=h;
+  host.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function toggleArqOrders(id){
+  var el=document.getElementById('arqOrders'); if(!el) return;
+  if(el.style.display!=='none'){ el.style.display='none'; return; }
+  var a=(gvCache[arqSuc]||[]).filter(function(x){return x.id===id;})[0]; if(!a) return;
+  var h='<div style="overflow-x:auto;margin-top:8px"><table class="tbl"><thead><tr><th>#</th><th>Marca</th><th>Canal</th><th>Monto</th><th>Nota</th></tr></thead><tbody>';
+  (a.ordenes||[]).forEach(function(o,i){
+    var canales=Object.keys(o.a||{});
+    if(!canales.length){ h+='<tr><td>'+(i+1)+'</td><td>'+esc(o.m)+'</td><td>—</td><td class="mono">0</td><td>'+esc(o.n||'')+'</td></tr>'; }
+    canales.forEach(function(c){ h+='<tr><td>'+(i+1)+'</td><td>'+esc(o.m)+'</td><td>'+(GV_CANAL[c]||c)+'</td><td class="mono">'+fmt(o.a[c])+'</td><td>'+esc(o.n||'')+'</td></tr>'; });
+  });
+  h+='</tbody></table></div>';
+  el.innerHTML=h; el.style.display='block';
+}
+
 function onBranch(){ curBranch=document.getElementById('branchSel').value; openEmp={}; openSched={}; renderAll(); }
 function shiftWeek(n){ curMonday=addDays(curMonday,7*n); openEmp={}; openSched={}; renderWeekLabel(); renderWeek(); renderSchedule(); }
 
