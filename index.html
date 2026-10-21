@@ -461,7 +461,7 @@
   <div class="loginR">
     <div class="hhead">Sistemas a la medida de tu empresa.</div>
     <div class="hsub">NUMMEROS by CONTAX · Control de horas y arqueos</div>
-    <img class="statue" src="assets/nummeros/clasicos/pitagoras-tablet.jpg" alt="" loading="eager">
+    <img class="statue" src="assets/nummeros/clasicos/pitagoras-tablet.jpg?v=44" alt="" loading="eager">
     <div class="bubble">
       <div class="bchip"><span class="av"><svg viewBox="0 0 546 728" style="width:15px;height:15px" fill="#fff"><path d="M0 427 L0 728 L136 728 L136 634 Z M410 0 L410 85 L546 292 L546 0 Z M0 0 L148 0 L410 458.5 L410 341 L546 548 L546 728 L401.71 728 L136 263 L136 379 L0 172 Z"/></svg></span> <b>Pitágoras</b> <span>Los números del día a día</span></div>
       <div class="bmsg">Horas, pagos y arqueos siempre al día.</div>
@@ -512,7 +512,7 @@
           </div>
           <div class="hhR">
             <svg class="relN" viewBox="0 0 546 728" aria-hidden="true"><path d="M0 427 L0 728 L136 728 L136 634 Z M410 0 L410 85 L546 292 L546 0 Z M0 0 L148 0 L410 458.5 L410 341 L546 548 L546 728 L401.71 728 L136 263 L136 379 L0 172 Z"/></svg>
-            <img class="hhStatue" src="assets/nummeros/clasicos/euclides-lentes.jpg" alt="" loading="lazy">
+            <img class="hhStatue" src="assets/nummeros/clasicos/euclides-lentes.jpg?v=44" alt="" loading="lazy">
             <div class="relCifra" id="homeCifra"></div>
           </div>
         </div>
@@ -771,7 +771,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v43';
+var APP_VERSION = 'v44';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -1244,7 +1244,7 @@ function renderWeek(){
     } else {
       if(inner){ html='<div class="cardgrid">'+inner+'</div>'; }
       else if(emps.length){ html='<div class="empty">No hay trabajadores en este filtro esta semana.</div>'; }
-      else { html='<div class="empty"><img class="cl" src="assets/nummeros/clasicos/euclides-laptop.jpg" alt="" loading="lazy">No hay personal activo en '+branchName(bid)+'.<br>Agrégalo en la pestaña <b>Personal</b>.</div>'; }
+      else { html='<div class="empty"><img class="cl" src="assets/nummeros/clasicos/euclides-laptop.jpg?v=44" alt="" loading="lazy">No hay personal activo en '+branchName(bid)+'.<br>Agrégalo en la pestaña <b>Personal</b>.</div>'; }
     }
   });
   if(curBranch==='all' && !html){ html='<div class="empty">No hay trabajadores en este filtro esta semana.</div>'; }
@@ -2823,7 +2823,7 @@ async function renderArqueos(){
   var arr;
   try{ arr=await loadArqSuc(arqSuc); }
   catch(e){ body.innerHTML='<div class="empty">No se pudo leer de la nube.<br>'+esc(e.message)+'</div>'; return; }
-  if(!arr.length){ body.innerHTML='<div class="empty"><img class="cl" src="assets/nummeros/clasicos/pitagoras-inventario.jpg" alt="" loading="lazy">Esta sucursal aún no tiene arqueos registrados.</div>'; return; }
+  if(!arr.length){ body.innerHTML='<div class="empty"><img class="cl" src="assets/nummeros/clasicos/pitagoras-inventario.jpg?v=44" alt="" loading="lazy">Esta sucursal aún no tiene arqueos registrados.</div>'; return; }
   var meses=[], seen={};
   arr.forEach(function(a){ var ym=(a.fecha||'').slice(0,7); if(ym && !seen[ym]){seen[ym]=1; meses.push(ym);} });
   meses.sort().reverse();
