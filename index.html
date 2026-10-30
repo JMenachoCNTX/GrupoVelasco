@@ -165,6 +165,9 @@
     display:flex;align-items:center;justify-content:center;font-weight:700}
   .topbar .who{margin-left:auto; text-align:right; font-size:12px; opacity:.9}
   .topbar .who b{display:block; font-size:13px; opacity:1}
+  .cajlist{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+  .cajlist .cajbtn{padding:10px 14px; font-size:13.5px}
+  .porchip{display:inline-block; font-size:10.5px; color:var(--muted); margin-left:6px}
   .logout{background:rgba(255,255,255,.14);border:none;color:#fff;border-radius:9px;
     padding:8px 11px; font-size:12.5px; font-weight:600}
   .logout:hover{background:rgba(255,255,255,.25)}
@@ -585,6 +588,7 @@
       <span class="topLogoWrap"><img id="topLogo" class="topLogo" alt="NUMMEROS"></span>
       <div><b style="font-size:13px">GrupoVelasco</b></div>
       <div class="who"><b id="whoName">—</b><span id="whoRole"></span></div>
+      <button class="logout" id="cambiarCajeroBtn" onclick="pedirCajero()" title="Cambio de turno: elegir otro cajero" style="display:none">Cambiar cajero</button>
       <button class="logout" id="themeBtn" onclick="cycleTheme()" title="Tema" style="padding:8px 10px"></button>
       <button class="logout" onclick="logout()">Salir</button>
     </div>
@@ -860,7 +864,7 @@
   </div>
 </div>
 
-<div class="modalOverlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+<div class="modalOverlay" id="modalOverlay" onclick="if(event.target===this && !this.dataset.fijo)closeModal()">
   <div class="modalCard" id="modalCard"></div>
 </div>
 
@@ -894,10 +898,16 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v47';
+var APP_VERSION = 'v48';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
+// cuenta genérica de caja (editor de UNA sucursal): al entrar se elige quién está en caja
+function esCuentaCaja(){ return !!(session && session.level==='editor' && session.branch && session.branch!=='*'); }
+function operadorNombre(){ return session ? (session.operador || session.name || session.email.split('@')[0]) : ''; }
+// sucursal de arqueo de la cuenta de caja
+function sucDeCaja(){ if(!esCuentaCaja()) return null; var m=GV_SUC.filter(function(x){return x.br===session.branch;})[0]; return m?m.id:null; }
+function puedeArqueos(){ return isAdmin() || !!sucDeCaja(); }
 function canEdit(){ return !!(session && (session.level==='admin' || session.level==='editor')); }
 function canEditSchedule(){ return !!(session && (session.level==='admin' || session.level==='rrhh')); }
 function seesAll(){ return !!(session && session.branch==='*'); }
@@ -1197,8 +1207,9 @@ function startApp(){
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='block';
   updateThemeUI();
-  document.getElementById('whoName').textContent = session.name || session.email.split('@')[0];
-  document.getElementById('whoRole').textContent = levelLabel(session.level) + (session.branch==='*' ? '' : ' · '+branchName(session.branch)) + (session.cargo? ' · '+session.cargo : '');
+  document.getElementById('whoName').textContent = esCuentaCaja() && session.operador ? session.operador : (session.name || session.email.split('@')[0]);
+  document.getElementById('whoRole').textContent = esCuentaCaja() ? ('Caja '+branchName(session.branch)) : (levelLabel(session.level) + (session.branch==='*' ? '' : ' · '+branchName(session.branch)) + (session.cargo? ' · '+session.cargo : ''));
+  var cb=document.getElementById('cambiarCajeroBtn'); if(cb) cb.style.display = esCuentaCaja() ? '' : 'none';
 
   // Sucursal accesible
   var sel=document.getElementById('branchSel');
@@ -1215,12 +1226,41 @@ function startApp(){
 
   document.getElementById('adminBox').style.display = isAdmin() ? 'block' : 'none';
   var ts=document.getElementById('tabSched'); if(ts) ts.style.display = canEditSchedule() ? '' : 'none';
-  var ta=document.getElementById('tabArq'); if(ta) ta.style.display = isAdmin() ? '' : 'none';
+  var ta=document.getElementById('tabArq'); if(ta) ta.style.display = puedeArqueos() ? '' : 'none';
   document.getElementById('monthPick').value = isoLocal(curMonday).slice(0,7);
 
   maybeAutoConnect();
   renderAll();
   showTab('Home');
+  if(esCuentaCaja() && !session.operador) pedirCajero(); else maybeShowReminder();
+}
+/* ---- ¿Quién está en caja? (cuentas genéricas de sucursal) ---- */
+function cajerosSucursal(br){
+  var act=Object.keys(DB.employees||{}).map(function(id){return DB.employees[id];}).filter(function(e){ return e.branch===br && e.active && !needsApellido(e); });
+  var caj=act.filter(function(e){ return /cajer/i.test(e.cargo||''); });
+  return (caj.length?caj:act).map(function(e){ return empName(e); }).sort();
+}
+function pedirCajero(){
+  var lista=cajerosSucursal(session.branch);
+  var h='<h3>¿Quién está en caja?</h3><div class="body">Elige tu nombre. Así queda registrado quién carga las horas, quién hace los pagos y quién hace el arqueo de cierre.</div>';
+  if(lista.length){
+    h+='<div class="cajlist">'+lista.map(function(n){ return '<button class="mini cajbtn" onclick="elegirCajero(this.textContent)">'+esc(n)+'</button>'; }).join('')+'</div>';
+    h+='<div class="note" style="margin-top:10px">¿No apareces? Pide al administrador que te agregue en Personal con el cargo <b>Cajero</b>.</div>';
+  } else {
+    h+='<div class="note" style="margin:10px 0">Todavía no hay cajeros en Personal para '+esc(branchName(session.branch))+'. Escribe tu nombre completo:</div><input class="fld" id="cajLibre" placeholder="NOMBRE APELLIDO" style="text-transform:uppercase" oninput="this.value=normName(this.value)"><div class="acts" style="margin-top:10px"><button class="mini acc" onclick="var v=document.getElementById(\'cajLibre\').value.trim(); if(v.split(\' \').length<2){toast(\'Escribe nombre y apellido\');return;} elegirCajero(v)">Continuar</button></div>';
+  }
+  if(session.operador) h+='<div class="acts" style="margin-top:12px"><button class="mini" onclick="closeModal()">Cancelar</button></div>';
+  openModal(h);
+  var o=document.getElementById('modalOverlay'); if(o) o.dataset.fijo=session.operador?'':'1';
+}
+function elegirCajero(n){
+  session.operador=String(n).trim();
+  try{ sessionStorage.setItem('ch_sess', JSON.stringify(session)); }catch(e){}
+  var o=document.getElementById('modalOverlay'); if(o) o.dataset.fijo='';
+  closeModal();
+  document.getElementById('whoName').textContent=session.operador;
+  toast('Hola, '+session.operador.split(' ')[0]+'. Todo lo que registres queda a tu nombre.');
+  if(curScr==='Arq') renderArqueos();
   maybeShowReminder();
 }
 
@@ -1392,7 +1432,7 @@ function empCardHTML(id, entry, c, wk){
   var isOpen=!!openEmp[id];
   var html='<div class="empcard'+(isOpen?' open':'')+'" id="card_'+id+'">';
   html+='<div class="emphead" onclick="toggleEmp(\''+id+'\')">';
-  html+='<div><div class="nm">'+esc(empName(emp))+(needsApellido(emp)?' <span class="tag" style="background:var(--warnbg);color:var(--amber)">falta apellido</span>':'')+'</div><div class="meta">'+c.hrs.toFixed(1).replace('.',',')+' h · '+c.ext.toFixed(1).replace('.',',')+' extra</div></div>';
+  html+='<div><div class="nm">'+esc(empName(emp))+(needsApellido(emp)?' <span class="tag" style="background:var(--warnbg);color:var(--amber)">falta apellido</span>':'')+(needsCargo(emp)?' <span class="tag" style="background:var(--warnbg);color:var(--amber)">falta cargo</span>':(' <span class="tag">'+esc(emp.cargo)+'</span>'))+'</div><div class="meta">'+c.hrs.toFixed(1).replace('.',',')+' h · '+c.ext.toFixed(1).replace('.',',')+' extra</div></div>';
   html+='<div class="right"><div class="saldo mono">'+bs(c.saldo)+'</div>'+badgeHTML(c.estado)+'</div>';
   html+='<span class="chev">›</span></div>';
 
@@ -1411,6 +1451,12 @@ function empBodyHTML(id, entry, c, wk){
       +(canEdit()?'<div style="margin-top:9px"><button class="mini acc" onclick="showTab(\'Staff\')">Completar en Personal</button></div>':'')
       +'</div>';
   }
+  if(needsCargo(_emp)){
+    return '<div class="note" style="background:var(--warnbg);color:var(--amber);border-radius:10px;padding:12px 13px;font-weight:600">'
+      +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 3L2 20h20z"/><path d="M12 9v5M12 17h0"/></svg> Falta el <b>CARGO</b> de esta persona (Cajero, Cocinero, Mesero…). No se pueden registrar horas ni pagos hasta colocarlo.'
+      +(canEdit()?'<div style="margin-top:9px"><button class="mini acc" onclick="showTab(\'Staff\')">Colocar en Personal</button></div>':'')
+      +'</div>';
+  }
   var weekPaid = c.estado==='PAGADO';
   var h='<div class="ratebadge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg> Tarifa esta semana: <b>Normal Bs '+trim(r)+'/h</b> · <b>Extra Bs '+trim(re)+'/h</b></div>';
   h+='<div class="drow head"><span></span><span>Horas</span><span>Extras</span><span>Desc. Bs</span><span>Total</span></div>';
@@ -1424,7 +1470,7 @@ function empBodyHTML(id, entry, c, wk){
     var libre = dh===0&&de===0&&dx===0;
     var dis = (roleRO || (!admin && full)) ? ' disabled' : '';
     h+='<div class="drow'+(libre?' libre':'')+'">';
-    h+='<div class="day">'+DAYS[i]+'<small>'+date.getDate()+'/'+(date.getMonth()+1)+(full?' ✓':'')+'</small></div>';
+    h+='<div class="day"'+(cell.por?' title="Cargado por '+esc(cell.por)+'"':'')+'>'+DAYS[i]+'<small>'+date.getDate()+'/'+(date.getMonth()+1)+(full?' ✓':'')+'</small></div>';
     h+='<input class="cellin mono" inputmode="decimal"'+dis+' value="'+(dh?trim(dh):'')+'" placeholder="0" oninput="setCell(\''+id+'\','+i+',\'h\',this.value)">';
     h+='<input class="cellin mono" inputmode="decimal"'+dis+' value="'+(de?trim(de):'')+'" placeholder="0" oninput="setCell(\''+id+'\','+i+',\'e\',this.value)">';
     h+='<input class="cellin mono" inputmode="decimal"'+dis+' value="'+(dx?trim(dx):'')+'" placeholder="0" oninput="setCell(\''+id+'\','+i+',\'x\',this.value)">';
@@ -1462,7 +1508,7 @@ function empBodyHTML(id, entry, c, wk){
     var partial = paid>0 && rem>0.009;
     h+='<div class="pday"><div class="day">'+DAYS[i]+' '+date.getDate()+'/'+(date.getMonth()+1)+' · Gana '+bs(dg)+(partial?' · <span style="color:var(--amber)">falta '+bs(rem)+'</span>':'')+'</div><div class="ctrls">';
     if(full){
-      h+='<span class="paidchip">✓ Pagado '+fmtDate(cell.pf)+' · '+bs(paid)+'</span>';
+      h+='<span class="paidchip">✓ Pagado '+fmtDate(cell.pf)+' · '+bs(paid)+(cell.pmPor?' · por '+esc(cell.pmPor):'')+'</span>';
       h+='<button class="mini" onclick="printDayReceipt(\''+id+'\','+i+')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21z"/><path d="M9 8h6M9 12h6"/></svg> Recibo</button>';
       if(admin) h+='<button class="mini" onclick="unpayDay(\''+id+'\','+i+')">Quitar</button>';
     } else if(!roleRO){
@@ -1483,7 +1529,7 @@ function empBodyHTML(id, entry, c, wk){
   }
   if((ent.p||[]).length){
     h+='<div class="divider"></div><div class="note" style="font-weight:700;color:var(--ink2);margin-bottom:6px">Pagos generales (anteriores)</div>';
-    ent.p.forEach(function(p,idx){ h+='<div class="payrow"><span class="pf">'+fmtDate(p.f)+'</span><span class="pm mono">'+bs(p.m)+'</span><span class="pn">'+esc(p.n||'')+'</span>'+(admin?'<button class="del" onclick="delPay(\''+id+'\','+idx+')">✕</button>':'')+'</div>'; });
+    ent.p.forEach(function(p,idx){ h+='<div class="payrow"><span class="pf">'+fmtDate(p.f)+'</span><span class="pm mono">'+bs(p.m)+'</span><span class="pn">'+esc(p.n||'')+(p.por?' <span class="porchip">por '+esc(p.por)+'</span>':'')+'</span>'+(admin?'<button class="del" onclick="delPay(\''+id+'\','+idx+')">✕</button>':'')+'</div>'; });
   }
   var _paid=paidDaysOf(id);
   if(_paid.length){ h+='<div style="margin-top:12px"><button class="mini" onclick="printPersonWeekReceipts(\''+id+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21z"/><path d="M9 8h6M9 12h6"/></svg> Recibos de la semana ('+_paid.length+')</button></div>'; }
@@ -1496,6 +1542,7 @@ function canEditDay(id,i){ if(isAdmin()) return true; if(!canEdit()) return fals
 function payDay(id,i,btn){
   if(!canEdit() && !isAdmin()) return;
   if(!isAdmin() && dayFullyPaid(id,i)) return;
+  if(faltaDato(id)) return;
   var mEl=document.getElementById('pm_'+id+'_'+i), fEl=document.getElementById('pf_'+id+'_'+i);
   if(!mEl||!fEl) return;
   var f=fEl.value, m=num(mEl.value);
@@ -1505,7 +1552,7 @@ function payDay(id,i,btn){
   withLoader('Guardando pago…', function(){
     var e=getEntry(weekKey(curMonday),id,true);
     e.d[i].pm = num(e.d[i].pm) + m;   // acumula (permite pagar la diferencia)
-    e.d[i].pf = f;
+    e.d[i].pf = f; e.d[i].pmPor=operadorNombre();
     saveLocal(); rerenderCardBody(id); refreshCard(id); refreshStrip();
   }, 1800).then(function(){ toast('Pago registrado'); });
 }
@@ -1519,9 +1566,10 @@ function payAllDays(id,btn){
   if(!canEdit() && !isAdmin()) return;
   var fEl=document.getElementById('payallf_'+id); if(!fEl) return;
   var f=fEl.value; if(!f){ toast('Coloca la fecha de pago'); return; }
+  if(faltaDato(id)) return;
   var e=getEntry(weekKey(curMonday),id,true);
   var rr=entryRates(e,empBranch(id)), r=rr.r, re=rr.re, n=0;
-  for(var i=0;i<7;i++){ var c=e.d[i]||{h:0,e:0,x:0}; var dg=num(c.h)*r+num(c.e)*re-num(c.x); var rem=dg-num(c.pm); if(rem>0.009){ e.d[i]=c; c.pm=num(c.pm)+rem; c.pf=f; n++; } }
+  for(var i=0;i<7;i++){ var c=e.d[i]||{h:0,e:0,x:0}; var dg=num(c.h)*r+num(c.e)*re-num(c.x); var rem=dg-num(c.pm); if(rem>0.009){ e.d[i]=c; c.pm=num(c.pm)+rem; c.pf=f; c.pmPor=operadorNombre(); n++; } }
   if(!n){ toast('No hay días pendientes'); return; }
   btnBusy(btn,'Pagando…');
   withLoader('Guardando pagos…', function(){
@@ -1540,6 +1588,9 @@ function normName(s){
 /* Nombre completo para mostrar/reportar */
 function empName(e){ if(!e) return ''; var n=(e.nombre||'').trim(), a=(e.apellido||'').trim(); var full=(n+' '+a).trim(); return full || (e.name||''); }
 function needsApellido(e){ return !e || !((e.apellido||'').trim()); }
+function needsCargo(e){ return !e || !((e.cargo||'').trim()); }
+// bloquea horas y pagos de alguien sin apellido o sin cargo
+function faltaDato(id){ var e=DB.employees[id]; if(needsApellido(e)){ toast('Completa el APELLIDO en Personal'); return true; } if(needsCargo(e)){ toast('Primero coloca el CARGO de '+empName(e)+' en Personal'); return true; } return false; }
 
 /* --------- interacciones semana --------- */
 function toggleEmp(id){
@@ -1555,13 +1606,13 @@ function toggleEmp(id){
 }
 function setCell(id, dayIdx, field, val){
   if(!canEditDay(id,dayIdx)) return;
-  if(needsApellido(DB.employees[id])){ toast('Completa el APELLIDO en Personal'); return; }
+  if(faltaDato(id)) return;
   var wk=weekKey(curMonday);
   var entry=getEntry(wk,id,true);
   var v=num(val), lim=getLimits(), clamped=false;
   if(field==='h' && v>lim.dia){ v=lim.dia; clamped=true; }
   if(field==='e' && v>lim.extra){ v=lim.extra; clamped=true; }
-  entry.d[dayIdx][field]=v;
+  entry.d[dayIdx][field]=v; entry.d[dayIdx].por=operadorNombre();
   saveLocal();
   if(clamped){ toast('Máximo '+(field==='h'?lim.dia+' h':lim.extra+' h extra')+' por día'); rerenderCardBody(id); }
   refreshCard(id);
@@ -1622,13 +1673,14 @@ function renderPendAlert(){
 function gotoWeek(wk){ curMonday=mondayOf(parseISO(wk)); openEmp={}; openSched={}; showTab('Week'); renderWeekLabel(); renderWeek(); }
 function addPay(id){
   if(!canEditEntry(id)) return;
+  if(faltaDato(id)) return;
   var f=document.getElementById('pf_'+id).value||today();
   var m=num(document.getElementById('pm_'+id).value);
   var n=document.getElementById('pn_'+id).value.trim();
   if(m<=0){ toast('Ingresa un monto válido'); return; }
   var wk=weekKey(curMonday);
   var entry=getEntry(wk,id,true);
-  entry.p.push({f:f,m:m,n:n});
+  entry.p.push({f:f,m:m,n:n,por:operadorNombre()});
   saveLocal();
   rerenderCardBody(id);
   refreshCard(id); refreshStrip();
@@ -1636,9 +1688,10 @@ function addPay(id){
 }
 function payBalance(id, saldo){
   if(!canEditEntry(id)) return;
+  if(faltaDato(id)) return;
   var wk=weekKey(curMonday);
   var entry=getEntry(wk,id,true);
-  entry.p.push({f:today(), m:num(saldo), n:'Saldo de la semana'});
+  entry.p.push({f:today(), m:num(saldo), n:'Saldo de la semana', por:operadorNombre()});
   saveLocal();
   rerenderCardBody(id); refreshCard(id); refreshStrip();
   toast('Saldo pagado');
@@ -3011,6 +3064,7 @@ async function renderArqueos(){
     arqBind(); arqRender();
     return;
   }
+  if(sucDeCaja()) arqSuc=sucDeCaja();
   if(!arqSuc) arqSuc=GV_SUC[0].id;
   // ver un arqueo completo
   if(arqSel){
@@ -3022,7 +3076,7 @@ async function renderArqueos(){
   arqListHide(false); document.body.classList.remove('arqWide'); draft=null; arqRO=false;
   document.getElementById('arqTabs').innerHTML=[['arq','Historial Arqueos'],['gas','Historial Gastos'],['ord','Historial Órdenes']].map(function(t){
     return '<button class="'+(arqTab===t[0]?'on':'')+'" onclick="setArqTab(\''+t[0]+'\')">'+ARQ_IC[t[0]]+' '+t[1]+'</button>'; }).join('');
-  document.getElementById('arqSucPills').innerHTML = GV_SUC.map(function(s){
+  document.getElementById('arqSucPills').innerHTML = GV_SUC.filter(function(s){ return !sucDeCaja() || s.id===sucDeCaja(); }).map(function(s){
     return '<button class="'+(s.id===arqSuc?'on':'')+'" onclick="setArqSuc(\''+s.id+'\')">'+s.name+'</button>'; }).join('');
   body.innerHTML='<div class="empty">Cargando arqueos…</div>';
   document.getElementById('arqMesPills').innerHTML=''; document.getElementById('arqStrip').innerHTML='';
@@ -3107,6 +3161,9 @@ var arqMode='list', draft=null, arqRO=false, arqRaf=0;
 var ARQ_DRAFT_KEY='gvArqDraft';
 function r2(n){ return Math.round(num(n)*100)/100; }
 function hoyISO(){ var t=new Date(); return t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate()); }
+// el arqueo lleva la fecha en que se ABRIÓ la caja: si se cierra de madrugada (antes de las 6:00) es del día anterior
+var ARQ_HORA_CORTE=6;
+function fechaApertura(){ var t=new Date(); if(t.getHours()<ARQ_HORA_CORTE) t.setDate(t.getDate()-1); return t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate()); }
 async function nextNro(suc){ try{ var cache=await loadArqSuc(suc); var mx=0; cache.forEach(function(a){var n=parseInt(a.nro)||0;if(n>mx)mx=n;}); return String(mx+1); }catch(e){ return ''; } }
 // cajeros de la sucursal según Personal (cargo "Cajero"); si no hay, todo el personal activo
 function cajerosDe(suc){
@@ -3118,11 +3175,13 @@ function cajerosDe(suc){
 async function arqAutoDatos(d,cambioSuc){
   var last=null; try{ last=(await loadArqSuc(d.suc))[0]||null; }catch(e){}
   d.nro=await nextNro(d.suc);
-  if(!d.fecha) d.fecha=hoyISO();
-  if(cambioSuc || !d.cajero){ var cj=cajerosDe(d.suc); d.cajero=(last&&last.cajero)||(cj.length===1?cj[0]:''); }
+  if(!d.fecha) d.fecha=fechaApertura();
+  if(esCuentaCaja() && session.operador) d.cajero=session.operador;
+  else if(cambioSuc || !d.cajero){ var cj=cajerosDe(d.suc); d.cajero=(last&&last.cajero)||(cj.length===1?cj[0]:''); }
   if(last && last.turno && (cambioSuc || (!d.turnoIni && !d.turnoFin))){ var tt=String(last.turno).split('-'); d.turnoIni=tt[0]||''; d.turnoFin=tt[1]||''; }
 }
 function sucDefault(){
+  if(sucDeCaja()) return sucDeCaja();
   if(session && session.branch && session.branch!=='*'){ var m=GV_SUC.filter(function(x){return x.br===session.branch;})[0]; if(m) return m.id; }
   return (arqSuc && arqSuc!=='cine')?arqSuc:'equipetrol_mp';
 }
@@ -3136,11 +3195,12 @@ function ordUsada(o){ if(o.n) return true; for(var k in (o.a||{})){ if(num(o.a[k
 function guardarBorrador(){ if(!draft||arqRO) return; try{ localStorage.setItem(ARQ_DRAFT_KEY, JSON.stringify(draft)); }catch(e){} }
 function borrarBorrador(){ try{ localStorage.removeItem(ARQ_DRAFT_KEY); }catch(e){} }
 async function newArqueo(){
+  if(esCuentaCaja() && !session.operador){ pedirCajero(); return; }
   var prev=null; try{ prev=JSON.parse(localStorage.getItem(ARQ_DRAFT_KEY)||'null'); }catch(e){}
   if(prev && prev.ordenes && prev.ordenes.some(ordUsada) && confirm('Tienes un arqueo sin guardar (Nro '+(prev.nro||'—')+' · '+gvSucName(prev.suc)+').\n\nAceptar = continuar ese arqueo\nCancelar = empezar uno nuevo')){
     draft=prev;
   } else {
-    draft={suc:sucDefault(),fecha:hoyISO(),nro:'',cajero:'',turnoIni:'',turnoFin:'',cajaChica:'',ventasGerente:'',ordenes:[],gastos:[],conteo:{},comentarios:''};
+    draft={suc:sucDefault(),fecha:fechaApertura(),nro:'',cajero:'',turnoIni:'',turnoFin:'',cajaChica:'',ventasGerente:'',ordenes:[],gastos:[],conteo:{},comentarios:''};
     showLoader('Preparando el arqueo…'); await arqAutoDatos(draft,false); hideLoader();
   }
   arqMode='new'; arqRO=false; arqSel=null; padRows(draft);
@@ -3207,7 +3267,7 @@ function gasRowHTML(g,i){
 function aField(label,inner){ return '<div><label>'+label+'</label>'+inner+'</div>'; }
 function arqSheetHTML(d){
   var ro=arqRO;
-  var sucOpts=GV_SUC.filter(function(s){return s.id!=='cine'||s.id===d.suc;}).map(function(s){return '<option value="'+s.id+'"'+(s.id===d.suc?' selected':'')+'>'+s.name+'</option>';}).join('');
+  var sucOpts=GV_SUC.filter(function(s){return (s.id!=='cine'||s.id===d.suc) && (!sucDeCaja()||s.id===d.suc);}).map(function(s){return '<option value="'+s.id+'"'+(s.id===d.suc?' selected':'')+'>'+s.name+'</option>';}).join('');
   var h='<div class="arqv" id="asheet">';
   // --- cabecera
   h+='<div class="acard ahero"><div class="ahead"><div class="alogos">'+arqMarcas(d).map(function(k){return '<img src="'+GV_MK[k].logo+'" alt="'+esc(GV_MK[k].n)+'">';}).join('')+'</div>';
@@ -3216,9 +3276,9 @@ function arqSheetHTML(d){
   else h+='<span class="note" id="aSaved"></span><button class="mini" onclick="cancelArqueo()">Cancelar</button><button class="mini acc aguardar" onclick="saveArqueo(this)">Guardar arqueo</button>';
   h+='</div><div class="afields">';
   h+=aField('Sucursal','<select class="fld ain" data-f="d" data-c="suc"'+(ro?' disabled':'')+'>'+sucOpts+'</select>');
-  h+=aField('Fecha','<input class="fld ain" type="date" data-f="d" data-c="fecha" value="'+esc(d.fecha)+'"'+(ro?' readonly tabindex="-1"':'')+'>');
+  h+=aField('Fecha (día que abrió caja)','<input class="fld ain" type="date" data-f="d" data-c="fecha" value="'+esc(d.fecha)+'"'+(ro?' readonly tabindex="-1"':'')+' title="Si cierras después de medianoche, deja la fecha del día en que abriste caja">');
   h+=aField('Nro de arqueo',aIn('d',null,'nro',d.nro,{cls:'fld'}));
-  h+=aField('Cajero',aIn('d',null,'cajero',d.cajero,{cls:'fld',ph:'Nombre',list:'gvCajeros'})+'<datalist id="gvCajeros">'+(ro?'':cajerosDe(d.suc).map(function(n){return '<option value="'+esc(n)+'">';}).join(''))+'</datalist>');
+  h+=aField('Cajero',(esCuentaCaja()&&!ro?aIn('d',null,'cajero',d.cajero,{cls:'fld'}).replace('<input ','<input readonly tabindex="-1" title="Cajero elegido al entrar" '):aIn('d',null,'cajero',d.cajero,{cls:'fld',ph:'Nombre',list:'gvCajeros'}))+'<datalist id="gvCajeros">'+(ro?'':cajerosDe(d.suc).map(function(n){return '<option value="'+esc(n)+'">';}).join(''))+'</datalist>');
   h+=aField('Inicio de turno',aIn('d',null,'turnoIni',d.turnoIni,{cls:'fld',ph:'11:00'}));
   h+=aField('Fin de turno',aIn('d',null,'turnoFin',d.turnoFin,{cls:'fld',ph:'23:00'}));
   h+=aField('Inicio caja chica (Bs)',aIn('d',null,'cajaChica',d.cajaChica||'',{cls:'fld n',num:1,ph:'0,00'}));
@@ -3502,7 +3562,9 @@ async function saveArqueo(btn){
   if(malas.length){ toast('Orden #'+malas[0]+': esa marca no vende por ese canal en esta sucursal'); return; }
   if(!draft.ordenes.some(function(o){ return Object.keys(o.a||{}).some(function(k){return num(o.a[k]);}); })){ toast('Agrega al menos una orden con importe'); return; }
   var c=computeArqTotals(draft), ac=arqCalc(draft), q={saldo:ac.saldo,sobre:ac.sobre,dif:ac.dif}, id=draft.suc+'_'+draft.nro;
-  try{ var cache=await loadArqSuc(draft.suc); if(cache.some(function(a){return a.id===id;})){ if(!confirm('Ya existe un arqueo Nro '+draft.nro+' en esta sucursal. ¿Sobrescribir?')) return; } }catch(e){}
+  try{ var cache=await loadArqSuc(draft.suc); if(cache.some(function(a){return a.id===id;})){
+    if(!isAdmin()){ toast('Ya existe el arqueo Nro '+draft.nro+'. Usa el número siguiente.'); return; }
+    if(!confirm('Ya existe un arqueo Nro '+draft.nro+' en esta sucursal. ¿Sobrescribir?')) return; } }catch(e){}
   var conteoObj=Object.assign({}, draft.conteo||{}); conteoObj.cajaChica=num(draft.cajaChica);
   var doc={ id:id, nro:draft.nro, suc:draft.suc, fecha:draft.fecha, cajero:draft.cajero,
     turno:(draft.turnoIni&&draft.turnoFin?draft.turnoIni+'-'+draft.turnoFin:(draft.turnoIni||draft.turnoFin||'')),
@@ -3513,7 +3575,7 @@ async function saveArqueo(btn){
     comentarios:draft.comentarios||'', mes:(MONTHS[parseInt(draft.fecha.slice(5,7),10)-1]||'').toLowerCase(),
     ordenes:draft.ordenes.filter(ordUsada).map(function(o){ var a={}; for(var k in (o.a||{})){ if(num(o.a[k])) a[k]=num(o.a[k]); } var r={m:o.m,a:a}; if(o.n) r.n=o.n; return r; }),
     gastos:draft.gastos.filter(function(g){return g.g||num(g.t)>0;}).map(function(g){ return {g:g.g,t:num(g.t),tipo:g.tipo||'',doc:g.doc||'',docnro:g.docnro||''}; }),
-    formato:2, estado:'capturado', creadoEn:Date.now(), creadoPor:(session?session.email:'') };
+    formato:2, estado:'capturado', creadoEn:Date.now(), creadoPor:(session?session.email:''), hechoPor:operadorNombre() };
   btnBusy(btn,'Guardando…');
   showLoader('Guardando arqueo…'); var _ts=Date.now();
   try{
@@ -3638,7 +3700,7 @@ async function maybeAutoConnect(){
   loadLocal();
   applyBranding();
   // restaurar sesión de la pestaña
-  try{ var s=JSON.parse(sessionStorage.getItem('ch_sess')||'null'); if(s){ var u=findUser(s.email); if(u){ session={ email:u.email, level:u.level||(u.role==='admin'?'admin':'editor'), branch:u.branch||'*', name:u.name||'', cargo:u.cargo||'' }; startApp(); return; } } }catch(e){}
+  try{ var s=JSON.parse(sessionStorage.getItem('ch_sess')||'null'); if(s){ var u=findUser(s.email); if(u){ session={ email:u.email, level:u.level||(u.role==='admin'?'admin':'editor'), branch:u.branch||'*', name:u.name||'', cargo:u.cargo||'', operador:s.operador||'' }; startApp(); return; } } }catch(e){}
   // conectar a la nube ANTES del login para reconocer a los usuarios de la nube
   maybeAutoConnect();
   document.getElementById('liPin').addEventListener('keydown',function(e){ if(e.key==='Enter') doLogin(); });

@@ -36,7 +36,7 @@ function doPost(e) {
 
 // Ejecuta esta función UNA vez con el botón "Ejecutar": pide el permiso para
 // enviar correos y te manda un correo de prueba a ti mismo.
-function probar() {
+function probarCorreoArqueos() {
   var yo = Session.getEffectiveUser().getEmail();
   MailApp.sendEmail(yo, 'PRUEBA - Correo de arqueos GrupoVelasco', 'El permiso para enviar correos quedó autorizado.');
   Logger.log('Correo de prueba enviado a ' + yo + '. Correos disponibles hoy: ' + MailApp.getRemainingDailyQuota());
