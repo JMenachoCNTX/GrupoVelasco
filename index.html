@@ -920,7 +920,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v49';
+var APP_VERSION = 'v50';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -3228,7 +3228,7 @@ async function newArqueo(){
   if(esCuentaCaja() && !session.operador){ pedirCajero(); return; }
   var prev=null; try{ prev=JSON.parse(localStorage.getItem(ARQ_DRAFT_KEY)||'null'); }catch(e){}
   if(prev && prev.ordenes && prev.ordenes.some(ordUsada) && confirm('Tienes un arqueo sin guardar (Nro '+(prev.nro||'—')+' · '+gvSucName(prev.suc)+').\n\nAceptar = continuar ese arqueo\nCancelar = empezar uno nuevo')){
-    draft=prev;
+    draft=prev; showLoader('Preparando el arqueo…'); draft.nro=await nextNro(draft.suc); hideLoader();
   } else {
     draft={suc:sucDefault(),fecha:fechaApertura(),nro:'',cajero:'',turnoIni:'',turnoFin:'',cajaChica:'',ventasGerente:'',ordenes:[],gastos:[],conteo:{},comentarios:''};
     showLoader('Preparando el arqueo…'); await arqAutoDatos(draft,false); hideLoader();
@@ -3351,7 +3351,7 @@ function arqSheetHTML(d){
   h+='<div class="ahcol"><div class="ahct">Datos del arqueo</div>';
   h+=aField('Sucursal','<select class="fld ain" data-f="d" data-c="suc"'+(ro?' disabled':'')+'>'+sucOpts+'</select>');
   h+=aField('Fecha','<input class="fld ain" type="date" data-f="d" data-c="fecha" value="'+esc(d.fecha)+'"'+(ro?' readonly tabindex="-1"':'')+' title="Día en que se abrió la caja (si cierras después de medianoche, se queda el día anterior)">');
-  h+=aField('Nro',aIn('d',null,'nro',d.nro,{cls:'fld'}));
+  h+=aField('Nro',aIn('d',null,'nro',d.nro,{cls:'fld'}).replace('<input ','<input readonly tabindex="-1" title="Número automático: el siguiente de la sucursal. Se confirma al guardar." '));
   h+=aField('Cajero',(esCuentaCaja()&&!ro?aIn('d',null,'cajero',d.cajero,{cls:'fld'}).replace('<input ','<input readonly tabindex="-1" title="Cajero elegido al entrar" '):aIn('d',null,'cajero',d.cajero,{cls:'fld',ph:'Nombre',list:'gvCajeros'}))+'<datalist id="gvCajeros">'+(ro?'':cajerosDe(d.suc).map(function(n){return '<option value="'+esc(n)+'">';}).join(''))+'</datalist>');
   h+='</div><div class="ahcol"><div class="ahct">Turno y caja</div>';
   h+=aField('Inicio turno',aIn('d',null,'turnoIni',d.turnoIni,{cls:'fld',ph:'11:00'}));
@@ -3701,7 +3701,6 @@ async function saveArqueo(btn){
   draft.nro=String(draft.nro||'').trim(); draft.cajero=String(draft.cajero||'').trim();
   if(!draft.suc){ toast('Elige la sucursal'); return; }
   if(!draft.fecha){ toast('Coloca la fecha'); return; }
-  if(!draft.nro){ toast('Coloca el número de arqueo'); return; }
   if(!draft.cajero){ toast('Coloca el cajero'); return; }
   var sinMarca=draft.ordenes.filter(function(o){ return ordUsada(o) && !mkKey(o.m) && Object.keys(o.a||{}).length; }).length;
   if(sinMarca){ toast('Hay '+sinMarca+' orden(es) sin marca'); return; }
@@ -3720,10 +3719,13 @@ async function saveArqueo(btn){
     if(falta.length){ toast('Gasto #'+(gi+1)+': falta '+falta.join(', ')); var cg=document.getElementById('cardEgr'); if(cg){ cg.classList.remove('acol'); var gr=cg.querySelector('tr[data-grow="'+gi+'"]'); if(gr) gr.scrollIntoView({block:'center',behavior:'smooth'}); } return; }
   }
   if(!draft.ordenes.some(function(o){ return Object.keys(o.a||{}).some(function(k){return num(o.a[k]);}); })){ toast('Agrega al menos una orden con importe'); return; }
+  // Nro automático: se vuelve a leer de la nube al guardar (por si otra caja guardó antes) = último + 1
+  delete gvCache[draft.suc];
+  var nro=await nextNro(draft.suc);
+  if(!nro){ toast('No se pudo leer el último número de arqueo. Revisa la conexión e intenta de nuevo.'); return; }
+  if(nro!==String(draft.nro)) toast('Número de arqueo asignado: '+nro);
+  draft.nro=nro;
   var c=computeArqTotals(draft), ac=arqCalc(draft), q={saldo:ac.saldo,sobre:ac.sobre,dif:ac.dif}, id=draft.suc+'_'+draft.nro;
-  try{ var cache=await loadArqSuc(draft.suc); if(cache.some(function(a){return a.id===id;})){
-    if(!isAdmin()){ toast('Ya existe el arqueo Nro '+draft.nro+'. Usa el número siguiente.'); return; }
-    if(!confirm('Ya existe un arqueo Nro '+draft.nro+' en esta sucursal. ¿Sobrescribir?')) return; } }catch(e){}
   var conteoObj=Object.assign({}, draft.conteo||{}); conteoObj.cajaChica=num(draft.cajaChica);
   var doc={ id:id, nro:draft.nro, suc:draft.suc, fecha:draft.fecha, cajero:draft.cajero,
     turno:(draft.turnoIni&&draft.turnoFin?draft.turnoIni+'-'+draft.turnoFin:(draft.turnoIni||draft.turnoFin||'')),

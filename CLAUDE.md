@@ -13,6 +13,7 @@ Sistema web interno para:
   - Desde la v49: cabecera en 4 columnas (datos / turno y caja / Control Facilito / resumen con cantidad y total), cada bloque se puede minimizar (`arqCol`, se recuerda en el equipo), botones "+ 10 filas" y "+ 5 filas" (`arqMasFilas`).
   - Reglas de órdenes (v49): una fila = una orden con UN tipo de pago (`PAYCOLS`); voucher y descuento de PedidosYa se activan con "+" (`EXTRAS`, `o.ex`); "Mixto" permite varias columnas de Local en una orden (`o.mix`, se guarda como `mx`). Lógica en `cellMotivo` / `arqFilaEstado`. Gastos: todas las columnas obligatorias al guardar.
   - Diferencia con Control Facilito = ventas del sistema − Facilito (positivo = SOBRANTE).
+- **Nro de arqueo automático** (v50): no se escribe; al guardar se vuelve a leer de la nube y se usa último + 1 de esa sucursal (`nextNro`).
 - **Mayúsculas** (v49): todo texto escrito se convierte a MAYÚSCULAS (listener global `input`; excepciones: correos, PIN, direcciones, configuración, clase `nomay`). Cargos y tipos de gasto también en mayúsculas.
 - **Cargos del personal** (v47): lista común en `DB.config.cargos` (Ajustes → Cargos); cada trabajador tiene `cargo`. En Personal hay un análisis por cargo (personas por sucursal, horas y pagos del mes).
 - **Correo de arqueos**: se configura en Ajustes → Correo de arqueos (con botón de prueba que muestra el error real). El código está en `apps-script/correo-arqueos.gs` y está instalado como archivo `CorreoArqueos.gs` dentro del proyecto de Apps Script "Sistema CONTAX - Control Horarios Grupovelasco SRL" (cuenta info@contaxbolivia.com, junto al correo semanal y el respaldo). Implementación "Correo de arqueos GrupoVelasco" como aplicación web, ejecuta como info@contaxbolivia.com. Para cambiar el código: editar, guardar y Gestionar implementaciones → editar → Nueva versión (la dirección no cambia). Desde la v49 el sistema arma el PDF en el navegador (html2canvas + jsPDF, `arqPdfBase64`: hoja 1 = reporte de ventas, datos y conteo; hoja 2 = 4 gráficos) y lo manda en el campo `pdf` (base64); el cuerpo del correo es un resumen (`arqMailBody`). Riesgo pendiente: el script envía a cualquier destinatario que reciba.
@@ -30,7 +31,7 @@ GRUPOVELASCO SRL (restaurantes). Sucursales en el código: Cine (cerrada), Memph
 - `index.html` — TODO el sistema en un solo archivo (≈3.200 líneas: HTML + CSS + JavaScript). Archivo grande: buscar con grep antes de editar.
 - `assets/nummeros/clasicos/` — fotos de los personajes "Clásicos" de la marca NUMMEROS.
 - `CNAME` — dominio propio.
-- La versión está en la variable `APP_VERSION` dentro de `index.html` (hoy `v49`) y se muestra en el login.
+- La versión está en la variable `APP_VERSION` dentro de `index.html` (hoy `v50`) y se muestra en el login.
 
 ## Dónde se guardan los datos
 - **Firebase Firestore**, proyecto `contax-sistemas` (configuración incluida en `index.html`, variable `BUILTIN_CLOUD`):
