@@ -283,6 +283,26 @@
   .acard.afull{position:fixed; inset:0; z-index:400; border-radius:0; margin:0; display:flex; flex-direction:column; padding:18px 22px}
   .acard.afull .aobox{max-height:none; flex:1}
   body.afullOn{overflow:hidden}
+  .acolb{padding:5px 8px!important} .acolb svg{transition:transform .15s}
+  .acard.acol > :not(h3):not(.ahead){display:none!important}
+  .acard.acol .acolb svg{transform:rotate(-90deg)} .acard.acol h3{margin-bottom:0}
+  .ahgrid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:14px}
+  @media(max-width:1150px){ .ahgrid{grid-template-columns:repeat(2,minmax(0,1fr))} } @media(max-width:620px){ .ahgrid{grid-template-columns:1fr} }
+  .ahcol{background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:10px 12px}
+  .ahct{font-size:11px; font-weight:800; color:var(--accent); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px}
+  .afr{display:grid; grid-template-columns:96px minmax(0,1fr); align-items:center; gap:8px; margin-bottom:6px}
+  .afr label{font-size:11.5px; color:var(--muted); font-weight:700; margin:0}
+  .afr .fld{padding:7px 10px}
+  .ahtab{width:100%; border-collapse:collapse; font-size:13px} .ahtab th{font-size:10.5px; color:var(--muted); font-weight:700; text-align:right; padding:2px 4px} .ahtab th:first-child{text-align:left}
+  .ahtab td{padding:7px 4px; border-bottom:1px dashed var(--line); text-align:right} .ahtab td:first-child{text-align:left; font-weight:700}
+  .kgrp{border:1px solid var(--line); border-radius:12px; padding:9px 11px 6px; margin-bottom:12px}
+  .gchip.kc{background:#163832} :root[data-theme="dark"] .gchip.kc{background:#8eb69b; color:#051f20}
+  .axbtn{width:78px; border:1px dashed var(--line); background:transparent; color:var(--muted); border-radius:8px; padding:6px 4px; font:inherit; font-size:11px; font-weight:700; cursor:pointer}
+  .axbtn:hover:not(:disabled){border-color:var(--accent); color:var(--accent)} .axbtn:disabled{opacity:.35; cursor:not-allowed}
+  .acmt{display:flex; gap:6px; align-items:center}
+  .axmix{flex:0 0 auto; border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:14px; padding:4px 9px; font:inherit; font-size:10.5px; font-weight:700; cursor:pointer}
+  .axmix.on{background:#235347; color:#fff; border-color:#235347}
+  body.printArq .acolb, body.printArq .axbtn, body.printArq button.axmix:not(.on){display:none!important}
   .a3{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; align-items:start}
   @media(max-width:1050px){ .a3{grid-template-columns:1fr} }
   .rgrp{margin-bottom:14px} .rgrp:last-child{margin-bottom:0}
@@ -306,6 +326,8 @@
   .cnl{font-weight:700} .cnl small{display:block; font-size:10.5px; color:var(--muted); font-weight:500}
   .cns{text-align:right; color:var(--muted)}
   .acom{min-height:70px; font-family:inherit; font-size:13px}
+  #app input[type=text]:not(.nomay), #app input:not([type]):not(.nomay), #app textarea:not(.nomay){text-transform:uppercase}
+  #app input::placeholder, #app textarea::placeholder{text-transform:none}
   @media print{
     body.printArq{background:#fff}
     body.printArq > *:not(#app), body.printArq #app > *:not(main), body.printArq main > section:not(#scrArq), body.printArq #scrArq > .panel, body.printArq #scrArq > .strip, body.printArq .ahead button, body.printArq .acard h3 .mini, body.printArq #aSaved, body.printArq .ahint{display:none!important}
@@ -797,9 +819,9 @@
         <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg> Correo de arqueos</h3>
         <div class="note" style="margin-bottom:8px">Cada arqueo guardado se envía en PDF a estos correos. Usa la dirección del Apps Script de Google (termina en <b>/exec</b>).</div>
         <label>Dirección del Apps Script</label>
-        <input class="fld" id="gvMailUrl" placeholder="https://script.google.com/macros/s/…/exec">
+        <input class="fld nomay" id="gvMailUrl" placeholder="https://script.google.com/macros/s/…/exec">
         <label>Destinatarios (separados por coma)</label>
-        <input class="fld" id="gvMailTo" placeholder="correo1@gmail.com, correo2@gmail.com">
+        <input class="fld nomay" id="gvMailTo" placeholder="correo1@gmail.com, correo2@gmail.com">
         <div class="payactions" style="margin-top:8px"><button class="mini acc" onclick="saveArqMail()">Guardar</button><button class="mini" onclick="testArqMail(this)">Enviar correo de prueba</button></div>
         <div class="note" id="gvMailRes" style="margin-top:8px"></div>
       </div>
@@ -898,7 +920,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v48';
+var APP_VERSION = 'v49';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -2677,8 +2699,16 @@ function importSched(ev){
 
 /* ================= RENDER: PERSONAL ================= */
 /* ---- Cargos del personal (iguales en todas las sucursales) ---- */
-var CARGOS_BASE=['Cajero','Cocinero','Ayudante de cocina','Mesero','Delivery','Limpieza','Encargado','Administración'];
-function getCargos(){ DB.config=DB.config||{}; if(!Array.isArray(DB.config.cargos)) DB.config.cargos=CARGOS_BASE.slice(); return DB.config.cargos; }
+var CARGOS_BASE=['CAJERO','COCINERO','AYUDANTE DE COCINA','MESERO','DELIVERY','LIMPIEZA','ENCARGADO','ADMINISTRACIÓN'];
+function getCargos(){
+  DB.config=DB.config||{}; if(!Array.isArray(DB.config.cargos)) DB.config.cargos=CARGOS_BASE.slice();
+  // todo en mayúsculas (también el cargo ya asignado a cada persona)
+  if(DB.config.cargos.some(function(c){ return c!==c.toUpperCase(); })){
+    DB.config.cargos=DB.config.cargos.map(function(c){ return c.toUpperCase(); });
+    Object.keys(DB.employees||{}).forEach(function(id){ var e=DB.employees[id]; if(e.cargo) e.cargo=e.cargo.toUpperCase(); });
+  }
+  return DB.config.cargos;
+}
 function cargoOpts(sel){ return '<option value="">Sin cargo</option>'+getCargos().map(function(c){ return '<option'+(c===sel?' selected':'')+'>'+esc(c)+'</option>'; }).join('')+(sel&&getCargos().indexOf(sel)<0?'<option selected>'+esc(sel)+'</option>':''); }
 function setEmpCargo(id,val){ if(!canEdit())return; var e=DB.employees[id]; if(!e)return; e.cargo=val; saveLocal(); renderCargoStats(); toast('Cargo actualizado'); }
 function renderCargosCfg(){
@@ -2688,10 +2718,10 @@ function renderCargosCfg(){
     return '<div class="branchrow"><input class="fld" value="'+esc(c)+'" onchange="renameCargo('+i+',this.value)"><span class="tag">'+(cnt[c]||0)+' pers.</span><button class="mini" onclick="moveCargo('+i+',-1)">↑</button><button class="mini" onclick="delCargo('+i+')">Quitar</button></div>';
   }).join('');
 }
-function addCargo(){ if(!isAdmin())return; var el=document.getElementById('newCargo'), v=(el.value||'').trim(); if(!v){ toast('Escribe el cargo'); return; }
+function addCargo(){ if(!isAdmin())return; var el=document.getElementById('newCargo'), v=(el.value||'').trim().toUpperCase(); if(!v){ toast('Escribe el cargo'); return; }
   if(getCargos().some(function(c){return c.toLowerCase()===v.toLowerCase();})){ toast('Ese cargo ya existe'); return; }
   getCargos().push(v); el.value=''; saveLocal(); renderCargosCfg(); toast('Cargo agregado'); }
-function renameCargo(i,v){ if(!isAdmin())return; v=(v||'').trim(); var old=getCargos()[i]; if(!v||v===old){ renderCargosCfg(); return; }
+function renameCargo(i,v){ if(!isAdmin())return; v=(v||'').trim().toUpperCase(); var old=getCargos()[i]; if(!v||v===old){ renderCargosCfg(); return; }
   getCargos()[i]=v; Object.keys(DB.employees).forEach(function(id){ if(DB.employees[id].cargo===old) DB.employees[id].cargo=v; });
   saveLocal(); renderCargosCfg(); toast('Cargo renombrado en todo el personal'); }
 function moveCargo(i,d){ var a=getCargos(), j=i+d; if(j<0||j>=a.length) return; var t=a[i]; a[i]=a[j]; a[j]=t; saveLocal(); renderCargosCfg(); }
@@ -2707,9 +2737,9 @@ function renderCargoStats(){
   var branches=shownBranches();
   var meses=[], seen={}; Object.keys(DB.weeks||{}).forEach(function(wk){ var ym=wk.slice(0,7); if(!seen[ym]){ seen[ym]=1; meses.push(ym); } }); meses.sort().reverse();
   if(!cargoYM || meses.indexOf(cargoYM)<0) cargoYM=meses[0]||'';
-  var lista=getCargos().concat(['Sin cargo']), A={};
+  var lista=getCargos().concat(['SIN CARGO']), A={};
   lista.forEach(function(c){ A[c]={pers:0,porSuc:{},horas:0,ganado:0,pagado:0,trab:{}}; });
-  var key=function(e){ return (e.cargo && A[e.cargo])?e.cargo:(e.cargo?(A[e.cargo]={pers:0,porSuc:{},horas:0,ganado:0,pagado:0,trab:{}},lista.splice(lista.length-1,0,e.cargo),e.cargo):'Sin cargo'); };
+  var key=function(e){ return (e.cargo && A[e.cargo])?e.cargo:(e.cargo?(A[e.cargo]={pers:0,porSuc:{},horas:0,ganado:0,pagado:0,trab:{}},lista.splice(lista.length-1,0,e.cargo),e.cargo):'SIN CARGO'); };
   branches.forEach(function(bid){ allEmps(bid).forEach(function(id){ var e=DB.employees[id]; if(!e.active) return; var k=key(e); A[k].pers++; A[k].porSuc[bid]=(A[k].porSuc[bid]||0)+1; }); });
   if(cargoYM){ var yy=+cargoYM.slice(0,4), mm=+cargoYM.slice(5,7)-1;
     weeksOfMonth(yy,mm).forEach(function(wk){ branches.forEach(function(bid){ allEmps(bid).forEach(function(id){ var w=(DB.weeks[wk]||{})[id]; if(!w) return; var c=calc(w,bid); if(c.ganado<=0&&c.pagado<=0) return; var k=key(DB.employees[id]); A[k].horas+=c.hrs; A[k].ganado+=c.ganado; A[k].pagado+=c.pagado; A[k].trab[id]=1; }); }); }); }
@@ -3061,7 +3091,7 @@ async function renderArqueos(){
   if(arqMode==='new'){
     arqListHide(true); document.body.classList.add('arqWide');
     body.innerHTML=arqSheetHTML(draft);
-    arqBind(); arqRender();
+    arqBind(); arqRender(); arqColApply();
     return;
   }
   if(sucDeCaja()) arqSuc=sucDeCaja();
@@ -3070,7 +3100,7 @@ async function renderArqueos(){
   if(arqSel){
     var arr0=[]; try{ arr0=await loadArqSuc(arqSuc); }catch(e){}
     var a=arr0.filter(function(x){return x.id===arqSel;})[0];
-    if(a){ arqListHide(true); document.body.classList.add('arqWide'); draft=docToDraft(a); arqRO=true; body.innerHTML=arqSheetHTML(draft); arqRender(); window.scrollTo({top:0,behavior:'smooth'}); return; }
+    if(a){ arqListHide(true); document.body.classList.add('arqWide'); draft=docToDraft(a); arqRO=true; body.innerHTML=arqSheetHTML(draft); arqRender(); arqColApply(); window.scrollTo({top:0,behavior:'smooth'}); return; }
     arqSel=null;
   }
   arqListHide(false); document.body.classList.remove('arqWide'); draft=null; arqRO=false;
@@ -3156,7 +3186,7 @@ function arqMarcas(d){ return gvSuc(d.suc).marcas; }
 // ¿la marca vende por ese canal en esa sucursal?
 function colPermitida(d,mk,col){ var g=(GV_COLS.filter(function(c){return c[0]===col;})[0]||[])[2]; if(gvSuc(d.suc).canales.indexOf(g)<0) return false; return !mk || GV_MK[mk].canales.indexOf(g)>=0; }
 var GV_DENOMS=[['d200',200,'Bs 200'],['d100',100,'Bs 100'],['d50',50,'Bs 50'],['d20',20,'Bs 20'],['d10',10,'Bs 10'],['d5',5,'Bs 5'],['d2',2,'Bs 2'],['d1',1,'Bs 1'],['d050',0.5,'Bs 0,50'],['d020',0.2,'Bs 0,20'],['d010',0.1,'Bs 0,10']];
-var GV_TIPOS_GASTO=['Transporte','Insumos','Limpieza','Mantenimiento','Personal','Servicios básicos','Otros'];
+var GV_TIPOS_GASTO=['TRANSPORTE','INSUMOS','LIMPIEZA','MANTENIMIENTO','PERSONAL','SERVICIOS BÁSICOS','OTROS'];
 var arqMode='list', draft=null, arqRO=false, arqRaf=0;
 var ARQ_DRAFT_KEY='gvArqDraft';
 function r2(n){ return Math.round(num(n)*100)/100; }
@@ -3210,7 +3240,7 @@ function docToDraft(a){
   var c=Object.assign({},a.conteo||{}); var caja=c.cajaChica; delete c.cajaChica;
   var tt=String(a.turno||'').split('-');
   return {suc:a.suc,fecha:a.fecha,nro:a.nro,cajero:a.cajero||'',turnoIni:tt[0]||'',turnoFin:tt[1]||'',cajaChica:caja||'',ventasGerente:a.ventasGerente||'',
-    ordenes:(a.ordenes||[]).map(function(o){ return {m:o.m||'',a:Object.assign({},o.a||{}),n:o.n||''}; }),
+    ordenes:(a.ordenes||[]).map(function(o){ return {m:o.m||'',a:Object.assign({},o.a||{}),n:o.n||'',mix:!!o.mx}; }),
     gastos:(a.gastos||[]).map(function(g){ return {g:g.g||'',t:g.t||'',doc:g.doc||'',docnro:g.docnro||'',tipo:g.tipo||''}; }),
     conteo:c, comentarios:a.comentarios||'', _doc:a};
 }
@@ -3218,12 +3248,14 @@ function docToDraft(a){
 /* --- cálculos (todo en vivo) --- */
 function conteoTotal(conteo){ var t=0; GV_DENOMS.forEach(function(dn){ t+=dn[1]*(num((conteo||{})[dn[0]])); }); return r2(t); }
 function arqCalc(d){
-  var t={}, by={}; GV_COLS.forEach(function(c){ t[c[0]]=0; }); GV_MK_ORD.forEach(function(k){ by[k]={}; });
+  var t={}, by={}, ped={}; GV_COLS.forEach(function(c){ t[c[0]]=0; }); GV_MK_ORD.forEach(function(k){ by[k]={}; ped[k]={}; });
   var nOrd=0;
   d.ordenes.forEach(function(o){
-    var k=mkKey(o.m), any=false;
+    var k=mkKey(o.m), any=false, gs={};
     for(var col in (o.a||{})){ var v=num(o.a[col]); if(!v||!(col in t)) continue; any=true; t[col]+=v;
+      if(PAYCOLS.indexOf(col)>=0) gs[colGrp(col)]=1;
       if(k){ var b=by[k][col]||(by[k][col]={n:0,v:0}); b.n++; b.v+=v; } }
+    if(k) for(var g in gs) ped[k][g]=(ped[k][g]||0)+1;
     if(any) nOrd++;
   });
   for(var x in t) t[x]=r2(t[x]);
@@ -3234,8 +3266,8 @@ function arqCalc(d){
   var ro=d._doc;
   var sobre=(ro&&ro.sobre!=null)?r2(ro.sobre):conteoTotal(d.conteo);
   var dif=(ro&&ro.difArqueo!=null)?r2(ro.difArqueo):r2(sobre-saldo);
-  var facil=num(d.ventasGerente), difFacil=facil?r2(facil-ventasExcel):0;
-  return {t:t,by:by,nOrd:nOrd,ventasPeya:ventasPeya,ventasLocal:ventasLocal,ventasYango:ventasYango,ventasExcel:ventasExcel,totalGastos:totalGastos,
+  var facil=num(d.ventasGerente), difFacil=facil?r2(ventasExcel-facil):0;   // sistema vendió más que Facilito = SOBRANTE
+  return {t:t,by:by,ped:ped,nOrd:nOrd,ventasPeya:ventasPeya,ventasLocal:ventasLocal,ventasYango:ventasYango,ventasExcel:ventasExcel,totalGastos:totalGastos,
     efectivo:efectivo,saldo:saldo,sobre:sobre,dif:dif,estado:arqEstado(dif),facil:facil,difFacil:difFacil,
     estadoFacil:facil?arqEstado(difFacil):'SIN DATO'};
 }
@@ -3251,41 +3283,87 @@ function mkSelHTML(o,i){
   ms.forEach(function(kk){ h+='<option value="'+esc(GV_MK[kk].n)+'"'+(kk===k?' selected':'')+'>'+esc(GV_MK[kk].n)+'</option>'; });
   return h+'</select>';
 }
+// columnas de pago (una por orden) y extras de PedidosYa (voucher / descuento: se habilitan con un clic)
+var PAYCOLS=['peya_efe','peya_onl','yango','loc_efe','loc_pos','loc_qr'], EXTRAS=['peya_vou','peya_promo','peya_otros'];
+function colGrp(col){ return (GV_COLS.filter(function(c){return c[0]===col;})[0]||[])[2]; }
+// '' = se puede escribir · 'toggle' = extra aún no activado · otro texto = motivo del bloqueo
+function cellMotivo(d,o,col){
+  var k=mkKey(o.m), g=colGrp(col), a=o.a||{};
+  if(!colPermitida(d,k,col)) return k?GV_MK[k].n+' no vende por '+GV_GRP[g]:'Esta sucursal no vende por '+GV_GRP[g];
+  var pays=PAYCOLS.filter(function(x){ return x!==col && num(a[x]); });
+  if(EXTRAS.indexOf(col)>=0){
+    if(pays.some(function(x){ return colGrp(x)!=='peya'; })) return 'El voucher y el descuento solo son para pedidos de PedidosYa';
+    if(!(o.ex||{})[col] && !num(a[col])) return 'toggle';
+    return '';
+  }
+  if(!pays.length) return '';
+  if(o.mix && g==='loc' && pays.every(function(x){ return colGrp(x)==='loc'; })) return '';
+  return 'Cada fila es UNA orden con UN tipo de pago'+(g==='loc'?' (si pagó con dos formas en el local, activa "Mixto")':'');
+}
+var EX_LBL={peya_vou:'+ Voucher',peya_promo:'+ Dscto',peya_otros:'+ Otro'};
+function ordCellHTML(o,i,c){
+  var v=(o.a||{})[c[0]], mot=cellMotivo(draft,o,c[0]);
+  if(arqRO) return aIn('o',i,c[0],v?v:'',{num:1,cls:'n'});
+  if(mot==='toggle'){ var mot2=cellMotivo(draft,Object.assign({},o,{ex:{peya_vou:1,peya_promo:1,peya_otros:1}}),c[0]);
+    return '<button type="button" class="axbtn" data-r="'+i+'" data-c="'+c[0]+'"'+(mot2?' disabled title="'+esc(mot2)+'"':' title="Clic si este pedido tuvo '+(c[0]==='peya_vou'?'voucher':'descuento')+'"')+'>'+EX_LBL[c[0]]+'</button>'; }
+  var inp=aIn('o',i,c[0],v?v:'',{num:1,cls:'n'+(mot&&num(v)?' mal':'')});
+  if(mot && !num(v)) inp=inp.replace('<input ','<input disabled title="'+esc(mot)+'" ');
+  else if(mot) inp=inp.replace('<input ','<input title="'+esc(mot)+'" ');
+  return inp;
+}
 function ordRowHTML(o,i){
-  var h='<tr><td class="anro">'+(i+1)+'</td><td>'+mkSelHTML(o,i)+'</td>';
-  var k=mkKey(o.m), prev='';
-  arqCols(draft).forEach(function(c){ var v=(o.a||{})[c[0]], ok=colPermitida(draft,k,c[0]);
-    var inp=aIn('o',i,c[0],v?v:'',{num:1,cls:'n'+(!ok&&num(v)?' mal':'')});
-    if(!ok && !num(v) && !arqRO) inp=inp.replace('<input ','<input disabled title="'+esc(GV_MK[k].n)+' no vende por '+GV_GRP[c[2]]+'" ');
-    h+='<td class="g-'+c[2]+(c[2]!==prev?' gs':'')+'">'+inp+'</td>'; prev=c[2]; });
-  return h+'<td>'+aIn('on',i,null,o.n||'',{ph:arqRO?'':'Comentario'})+'</td></tr>';
+  var h='<tr data-row="'+i+'"><td class="anro">'+(i+1)+'</td><td>'+mkSelHTML(o,i)+'</td>';
+  var prev='';
+  arqCols(draft).forEach(function(c){ h+='<td class="g-'+c[2]+(c[2]!==prev?' gs':'')+'">'+ordCellHTML(o,i,c)+'</td>'; prev=c[2]; });
+  var k=mkKey(o.m), conLoc=gvSuc(draft.suc).canales.indexOf('loc')>=0 && (!k || GV_MK[k].canales.indexOf('loc')>=0);
+  var mix=arqRO?(o.mix?'<span class="axmix on">Mixto</span>':''):(conLoc?'<button type="button" class="axmix'+(o.mix?' on':'')+'" data-r="'+i+'" title="Pago mixto en el local: parte en efectivo y parte por POS o QR">Mixto</button>':'');
+  return h+'<td><div class="acmt">'+mix+aIn('on',i,null,o.n||'',{ph:arqRO?'':'Comentario'})+'</div></td></tr>';
+}
+// actualiza qué casillas de la fila se pueden usar (sin redibujar lo que se está escribiendo)
+function arqFilaEstado(r){
+  var o=draft.ordenes[r], tr=document.querySelector('#ordRows tr[data-row="'+r+'"]'); if(!o||!tr) return;
+  arqCols(draft).forEach(function(c){
+    var el=tr.querySelector('[data-c="'+c[0]+'"]'); if(!el) return;
+    var mot=cellMotivo(draft,o,c[0]);
+    if(el.tagName==='BUTTON'){ var mot2=cellMotivo(draft,Object.assign({},o,{ex:{peya_vou:1,peya_promo:1,peya_otros:1}}),c[0]); el.disabled=!!mot2; el.title=mot2||''; return; }
+    if(mot==='toggle' && !num(el.value)){ el.parentNode.innerHTML=ordCellHTML(o,r,c); return; }
+    var v=num(el.value); el.disabled=!!mot && !v; el.title=mot||''; el.classList.toggle('mal',!!mot && !!v);
+  });
+  var mb=tr.querySelector('.axmix'); if(mb) mb.classList.toggle('on',!!o.mix);
 }
 function gasRowHTML(g,i){
-  var doc='<select class="ain" data-f="g" data-r="'+i+'" data-c="doc"'+(arqRO?' disabled':'')+'><option value="">—</option>'+['Recibo','Factura'].map(function(x){return '<option'+(g.doc===x?' selected':'')+'>'+x+'</option>';}).join('')+'</select>';
-  return '<tr><td class="anro">'+(i+1)+'</td><td>'+aIn('g',i,'g',g.g,{ph:arqRO?'':'Descripción del gasto'})+'</td><td>'+aIn('g',i,'t',g.t||'',{num:1,cls:'n'})+'</td><td>'+doc+'</td><td>'+aIn('g',i,'docnro',g.docnro)+'</td><td>'+aIn('g',i,'tipo',g.tipo,{list:'gvTiposGasto',ph:arqRO?'':'Tipo'})+'</td></tr>';
+  var doc='<select class="ain" data-f="g" data-r="'+i+'" data-c="doc"'+(arqRO?' disabled':'')+'><option value="">—</option>'+['RECIBO','FACTURA'].map(function(x){return '<option'+(String(g.doc||'').toUpperCase()===x?' selected':'')+'>'+x+'</option>';}).join('')+'</select>';
+  return '<tr data-grow="'+i+'"><td class="anro">'+(i+1)+'</td><td>'+aIn('g',i,'g',g.g,{ph:arqRO?'':'Descripción del gasto'})+'</td><td>'+aIn('g',i,'t',g.t||'',{num:1,cls:'n'})+'</td><td>'+doc+'</td><td>'+aIn('g',i,'docnro',g.docnro)+'</td><td>'+aIn('g',i,'tipo',g.tipo,{list:'gvTiposGasto',ph:arqRO?'':'Tipo'})+'</td></tr>';
 }
-function aField(label,inner){ return '<div><label>'+label+'</label>'+inner+'</div>'; }
+function aField(label,inner){ return '<div class="afr"><label>'+label+'</label>'+inner+'</div>'; }
+var ARQ_CHEV='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M6 9l6 6 6-6"/></svg>';
+function colBtn(id){ return '<button type="button" class="mini acolb" onclick="arqCol(\''+id+'\')" title="Minimizar / mostrar">'+ARQ_CHEV+'</button>'; }
 function arqSheetHTML(d){
   var ro=arqRO;
   var sucOpts=GV_SUC.filter(function(s){return (s.id!=='cine'||s.id===d.suc) && (!sucDeCaja()||s.id===d.suc);}).map(function(s){return '<option value="'+s.id+'"'+(s.id===d.suc?' selected':'')+'>'+s.name+'</option>';}).join('');
   var h='<div class="arqv" id="asheet">';
-  // --- cabecera
-  h+='<div class="acard ahero"><div class="ahead"><div class="alogos">'+arqMarcas(d).map(function(k){return '<img src="'+GV_MK[k].logo+'" alt="'+esc(GV_MK[k].n)+'">';}).join('')+'</div>';
+  // --- cabecera: 4 columnas
+  h+='<div class="acard ahero" id="cardHero"><div class="ahead"><div class="alogos">'+arqMarcas(d).map(function(k){return '<img src="'+GV_MK[k].logo+'" alt="'+esc(GV_MK[k].n)+'">';}).join('')+'</div>';
   h+='<div><div class="t">'+(ro?'Arqueo':'Nuevo arqueo')+' · Nro <span class="xNro"></span></div><div class="s"><span id="abSuc"></span> · <span id="abFecha"></span></div></div><span class="sp"></span>';
-  if(ro) h+='<button class="mini" onclick="printArqSheet()">Imprimir / PDF</button><button class="mini" onclick="emailArqueo(\''+esc(d._doc.id)+'\')">Correo</button><button class="mini acc" onclick="closeArqSheet()">← Volver</button>';
+  if(ro) h+='<button class="mini" onclick="printArqSheet()">Imprimir / PDF</button><button class="mini" onclick="emailArqueo(\''+esc(d._doc.id)+'\',this)">Correo</button><button class="mini acc" onclick="closeArqSheet()">← Volver</button>';
   else h+='<span class="note" id="aSaved"></span><button class="mini" onclick="cancelArqueo()">Cancelar</button><button class="mini acc aguardar" onclick="saveArqueo(this)">Guardar arqueo</button>';
-  h+='</div><div class="afields">';
+  h+=colBtn('cardHero')+'</div><div class="ahgrid">';
+  h+='<div class="ahcol"><div class="ahct">Datos del arqueo</div>';
   h+=aField('Sucursal','<select class="fld ain" data-f="d" data-c="suc"'+(ro?' disabled':'')+'>'+sucOpts+'</select>');
-  h+=aField('Fecha (día que abrió caja)','<input class="fld ain" type="date" data-f="d" data-c="fecha" value="'+esc(d.fecha)+'"'+(ro?' readonly tabindex="-1"':'')+' title="Si cierras después de medianoche, deja la fecha del día en que abriste caja">');
-  h+=aField('Nro de arqueo',aIn('d',null,'nro',d.nro,{cls:'fld'}));
+  h+=aField('Fecha','<input class="fld ain" type="date" data-f="d" data-c="fecha" value="'+esc(d.fecha)+'"'+(ro?' readonly tabindex="-1"':'')+' title="Día en que se abrió la caja (si cierras después de medianoche, se queda el día anterior)">');
+  h+=aField('Nro',aIn('d',null,'nro',d.nro,{cls:'fld'}));
   h+=aField('Cajero',(esCuentaCaja()&&!ro?aIn('d',null,'cajero',d.cajero,{cls:'fld'}).replace('<input ','<input readonly tabindex="-1" title="Cajero elegido al entrar" '):aIn('d',null,'cajero',d.cajero,{cls:'fld',ph:'Nombre',list:'gvCajeros'}))+'<datalist id="gvCajeros">'+(ro?'':cajerosDe(d.suc).map(function(n){return '<option value="'+esc(n)+'">';}).join(''))+'</datalist>');
-  h+=aField('Inicio de turno',aIn('d',null,'turnoIni',d.turnoIni,{cls:'fld',ph:'11:00'}));
-  h+=aField('Fin de turno',aIn('d',null,'turnoFin',d.turnoFin,{cls:'fld',ph:'23:00'}));
-  h+=aField('Inicio caja chica (Bs)',aIn('d',null,'cajaChica',d.cajaChica||'',{cls:'fld n',num:1,ph:'0,00'}));
-  h+=aField('Ventas en Control Facilito (Bs)',aIn('d',null,'ventasGerente',d.ventasGerente||'',{cls:'fld n',num:1,ph:'0,00'}));
+  h+='</div><div class="ahcol"><div class="ahct">Turno y caja</div>';
+  h+=aField('Inicio turno',aIn('d',null,'turnoIni',d.turnoIni,{cls:'fld',ph:'11:00'}));
+  h+=aField('Fin turno',aIn('d',null,'turnoFin',d.turnoFin,{cls:'fld',ph:'23:00'}));
+  h+=aField('Inicio caja',aIn('d',null,'cajaChica',d.cajaChica||'',{cls:'fld n',num:1,ph:'0,00'}));
+  h+='</div><div class="ahcol"><div class="ahct">Control Facilito</div>';
+  h+=aField('Ventas Facilito',aIn('d',null,'ventasGerente',d.ventasGerente||'',{cls:'fld n',num:1,ph:'0,00'}));
+  h+='<div id="aFac"></div>';
+  h+='</div><div class="ahcol"><div class="ahct">Resumen</div><table class="ahtab"><thead><tr><th></th><th>Cantidad</th><th>Total</th></tr></thead><tbody id="aResTab"></tbody></table></div>';
   h+='</div><div class="akpis" id="aKpis"></div></div>';
   // --- detalle de órdenes
-  h+='<div class="acard" id="cardOrd"><h3>'+ARQ_IC.ord+' Detalle de órdenes'+(ro?'':'<span class="ahint">Elige la marca y escribe el importe en la columna del canal. Enter baja a la fila siguiente. En "Marca" puedes pulsar M, S o N. Las casillas rayadas no aplican a esa marca.</span>')+'<span class="sp"></span><button class="mini" onclick="arqFull(\'cardOrd\')">'+ARQ_IC.full+' <span>Pantalla completa</span></button></h3>';
+  h+='<div class="acard" id="cardOrd"><h3>'+ARQ_IC.ord+' Detalle de órdenes'+(ro?'':'<span class="ahint">Una fila = una orden con un solo tipo de pago. Voucher y descuento: toca "+". Pago con dos formas en el local: "Mixto". Enter baja de fila; en Marca: M, S o N.</span>')+'<span class="sp"></span>'+(ro?'':'<button class="mini" onclick="arqMasFilas(\'o\')">+ 10 filas</button>')+'<button class="mini" onclick="arqFull(\'cardOrd\')">'+ARQ_IC.full+' <span>Pantalla completa</span></button>'+colBtn('cardOrd')+'</h3>';
   var cols=arqCols(d), grps=[];
   cols.forEach(function(c){ var l=grps[grps.length-1]; if(l&&l.k===c[2]) l.n++; else grps.push({k:c[2],n:1}); });
   h+='<div class="aobox"><table class="aot"><thead><tr class="grp"><th></th><th></th>'+grps.map(function(g){ return '<th colspan="'+g.n+'" class="gblk gs '+g.k+'"><span class="gchip '+g.k+'">'+GV_GRP[g.k]+'</span></th>'; }).join('')+'<th></th></tr><tr><th>#</th><th>Marca</th>';
@@ -3295,7 +3373,7 @@ function arqSheetHTML(d){
   (ro?d.ordenes.filter(ordUsada):d.ordenes).forEach(function(o,i){ h+=ordRowHTML(o,i); });
   h+='</tbody><tfoot><tr><td></td><td>Total</td>'+cols.map(function(c){return '<td class="n" id="aTot_'+c[0]+'"></td>';}).join('')+'<td id="aTotOrd"></td></tr></tfoot></table></div></div>';
   // --- egresos
-  h+='<div class="acard" id="cardEgr"><h3>'+ARQ_IC.gas+' Egresos / gastos de caja<span class="sp"></span><span class="atotchip">Total: <b id="aEgrTot"></b></span><button class="mini" onclick="arqFull(\'cardEgr\')">'+ARQ_IC.full+' <span>Pantalla completa</span></button></h3>';
+  h+='<div class="acard" id="cardEgr"><h3>'+ARQ_IC.gas+' Egresos / gastos de caja'+(ro?'':'<span class="ahint">Cada gasto necesita: descripción, monto, factura o recibo, nro de documento y tipo de gasto.</span>')+'<span class="sp"></span><span class="atotchip">Total: <b id="aEgrTot"></b></span>'+(ro?'':'<button class="mini" onclick="arqMasFilas(\'g\')">+ 5 filas</button>')+'<button class="mini" onclick="arqFull(\'cardEgr\')">'+ARQ_IC.full+' <span>Pantalla completa</span></button>'+colBtn('cardEgr')+'</h3>';
   h+='<div class="aobox egr"><table class="aot"><thead><tr><th>#</th><th>Gasto</th><th>Monto</th><th>Factura o recibo</th><th>Nro de documento</th><th>Tipo de gasto</th></tr></thead><tbody id="gasRows">';
   var gl=ro?d.gastos.filter(function(g){return g.g||num(g.t);}):d.gastos;
   if(ro && !gl.length) h+='<tr><td colspan="6" class="note" style="text-align:center;padding:14px">Sin gastos.</td></tr>';
@@ -3303,20 +3381,59 @@ function arqSheetHTML(d){
   h+='</tbody></table></div><datalist id="gvTiposGasto">'+GV_TIPOS_GASTO.map(function(x){return '<option value="'+esc(x)+'">';}).join('')+'</datalist></div>';
   // --- 3 bloques
   h+='<div class="a3">';
-  h+='<div class="acard"><h3>Reporte de ventas</h3><div id="aRep"></div></div>';
-  h+='<div class="acard"><h3>Datos del arqueo</h3><div id="aDat"></div></div>';
-  h+='<div class="acard"><h3>Conteo del dinero</h3><div class="cnlist">';
+  h+='<div class="acard" id="cardRep"><h3>Reporte de ventas<span class="sp"></span>'+colBtn('cardRep')+'</h3><div id="aRep"></div></div>';
+  h+='<div class="acard" id="cardDat"><h3>Datos del arqueo<span class="sp"></span>'+colBtn('cardDat')+'</h3><div id="aDat"></div></div>';
+  h+='<div class="acard" id="cardCnt"><h3>Conteo del dinero<span class="sp"></span>'+colBtn('cardCnt')+'</h3><div class="cnlist">';
   GV_DENOMS.forEach(function(dn){ var q=(d.conteo||{})[dn[0]]; h+='<div class="cnrow"><span class="cnl">'+dn[2]+'<small>'+(dn[1]>=10?'billete':'moneda')+'</small></span>'+aIn('cn',null,dn[0],q||'',{num:1,cls:'n',ph:'0'})+'<span class="cns mono" id="cs_'+dn[0]+'"></span></div>'; });
   h+='</div><div id="aCnt"></div><label class="alab">Comentarios del día</label><textarea class="fld ain acom" data-f="d" data-c="comentarios" rows="3"'+(ro?' readonly':'')+' placeholder="Observaciones del turno…">'+esc(d.comentarios||'')+'</textarea></div>';
   h+='</div>';
   // --- gráficos (estilo Tablero)
-  h+='<div class="chartgrid" id="aCharts"></div>';
+  h+='<div class="acard" id="cardGraf"><h3>'+ARQ_IC.ord.replace('M8 6h12M8 12h12M8 18h12','M5 20V12M10 20V6M15 20v-9M20 20V9')+' Gráficos del arqueo<span class="sp"></span>'+colBtn('cardGraf')+'</h3><div class="chartgrid" id="aCharts"></div></div>';
   h+='</div>';
   return h;
+}
+// minimizar / mostrar bloques (se recuerda en este equipo)
+function arqColGet(){ try{ return JSON.parse(localStorage.getItem('gvArqCol')||'{}'); }catch(e){ return {}; } }
+function arqCol(id){ var m=arqColGet(); m[id]=!m[id]; try{ localStorage.setItem('gvArqCol',JSON.stringify(m)); }catch(e){} var el=document.getElementById(id); if(el) el.classList.toggle('acol',!!m[id]); }
+function arqColApply(){ var m=arqColGet(); Object.keys(m).forEach(function(id){ var el=document.getElementById(id); if(el) el.classList.toggle('acol',!!m[id]); }); }
+function arqMasFilas(t){
+  if(!draft||arqRO) return;
+  if(t==='o'){ var b=draft.ordenes.length, tb=document.getElementById('ordRows'), h=''; for(var i=0;i<10;i++){ draft.ordenes.push({m:'',a:{},n:''}); h+=ordRowHTML(draft.ordenes[b+i],b+i); } tb.insertAdjacentHTML('beforeend',h); var f=tb.querySelector('tr[data-row="'+b+'"] select, tr[data-row="'+b+'"] input'); if(f) f.focus(); }
+  else { var b2=draft.gastos.length, tg=document.getElementById('gasRows'), h2=''; for(var j=0;j<5;j++){ draft.gastos.push({g:'',t:'',doc:'',docnro:'',tipo:''}); h2+=gasRowHTML(draft.gastos[b2+j],b2+j); } tg.insertAdjacentHTML('beforeend',h2); }
+  guardarBorrador(); toast(t==='o'?'10 filas más':'5 filas más');
 }
 function kvRow(l,v,cls){ return '<div class="kv'+(cls?' '+cls:'')+'"><span>'+l+'</span><b class="mono">'+v+'</b></div>'; }
 function estBadge(e,dif){ var cls=e==='CUADRADO'?'b-ok':(e==='SIN DATO'?'b-na':(e==='SOBRANTE'?'b-par':'b-no')); return '<span class="abadge '+cls+'">'+(e==='SIN DATO'?'Sin dato':e)+(e==='SOBRANTE'||e==='FALTANTE'?' · '+bs(Math.abs(dif)):'')+'</span>'; }
 function akpi(k,v,cls){ return '<div class="akpi'+(cls?' '+cls:'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>'; }
+function nGastos(d){ return d.gastos.filter(function(g){ return g.g||num(g.t); }).length; }
+// reporte de ventas: filas = tipo de pago, columnas = marcas
+function arqRepHTML(c,d){
+  var MS=arqMarcas(d), CAN=gvSuc(d.suc).canales;
+  var cell=function(k,cols){ var s=0; cols.forEach(function(col){ var b=c.by[k][col]; if(b) s+=b.v; }); return s; };
+  var grp=function(nombre,cls,rows,totCols){
+    if(CAN.indexOf(cls)<0) return '';
+    var MK=MS.filter(function(k){ return GV_MK[k].canales.indexOf(cls)>=0; });
+    rows=rows.filter(function(r){ return r[1][0]!=='peya_otros' || c.t.peya_otros; });
+    var h='<div class="rgrp"><div class="rgh"><span class="gchip '+cls+'">'+nombre+'</span></div><table class="rtab"><thead><tr><th></th>'+MK.map(function(k){return '<th><i class="mkdot" style="background:'+GV_MK[k].c+'"></i>'+esc(GV_MK[k].n)+'</th>';}).join('')+'<th>Total</th></tr></thead><tbody>';
+    rows.forEach(function(r){ var t=0; h+='<tr><td>'+r[0]+'</td>'+MK.map(function(k){ var v=cell(k,r[1]); t+=v; return '<td class="mono">'+(v?fmt(v):'<span class="z">0</span>')+'</td>'; }).join('')+'<td class="mono">'+fmt(t)+'</td></tr>'; });
+    var tt=0,tn=0; h+='<tr class="rtot"><td>Total ventas</td>'+MK.map(function(k){ var v=cell(k,totCols); tt+=v; return '<td class="mono">'+fmt(v)+'</td>'; }).join('')+'<td class="mono">'+fmt(tt)+'</td></tr>';
+    h+='<tr class="rcnt"><td>Pedidos</td>'+MK.map(function(k){ var n=(c.ped[k]||{})[cls]||0; tn+=n; return '<td class="mono">'+n+'</td>'; }).join('')+'<td class="mono">'+tn+'</td></tr>';
+    return h+'</tbody></table></div>';
+  };
+  return grp('PedidosYa','peya',[['Efectivo',['peya_efe']],['Online',['peya_onl']],['Vouchers',['peya_vou']],['Dscto. promoción',['peya_promo']],['Otros dsctos.',['peya_otros']]],['peya_efe','peya_onl'])+
+    grp('YANGO','yango',[['Online',['yango']]],['yango'])+
+    grp('Local','loc',[['Efectivo',['loc_efe']],['Tarjeta (POS)',['loc_pos']],['Transferencia / QR',['loc_qr']]],['loc_efe','loc_pos','loc_qr']);
+}
+// datos del arqueo: apartados con etiqueta, igual que el reporte de ventas
+function arqDatHTML(c,d){
+  var CAN=gvSuc(d.suc).canales, tiene=function(g){ return CAN.indexOf(g)>=0; };
+  var sec=function(t,body){ return '<div class="rgrp kgrp"><div class="rgh"><span class="gchip kc">'+t+'</span></div>'+body+'</div>'; };
+  var h=sec('Control de ventas',kvRow('Ventas en Control Facilito',c.facil?fmt(c.facil):'—')+kvRow('Ventas según el sistema',fmt(c.ventasExcel))+'<div class="kv"><span>Diferencia</span>'+estBadge(c.estadoFacil,c.difFacil)+'</div>');
+  h+=sec('Ventas por canal',(tiene('peya')?kvRow('PedidosYa',fmt(c.ventasPeya)):'')+kvRow('Local',fmt(c.ventasLocal))+(tiene('yango')?kvRow('YANGO',fmt(c.ventasYango)):''));
+  h+=sec('Detalle por tipo de pago',(tiene('peya')?kvRow('Efectivo PeYa',fmt(c.t.peya_efe))+kvRow('Online PeYa',fmt(c.t.peya_onl))+kvRow('Vouchers PeYa',fmt(c.t.peya_vou))+kvRow('Dscto. promoción PeYa',fmt(c.t.peya_promo))+(c.t.peya_otros?kvRow('Otros dsctos. PeYa',fmt(c.t.peya_otros)):''):'')+(tiene('yango')?kvRow('Online YANGO',fmt(c.t.yango)):'')+kvRow('Efectivo local',fmt(c.t.loc_efe))+kvRow('Tarjeta local',fmt(c.t.loc_pos))+kvRow('Transf./QR local',fmt(c.t.loc_qr)));
+  h+=sec('Balance del día',kvRow('Total tarjeta',fmt(c.t.loc_pos))+kvRow('Total online (PeYa + YANGO)',fmt(r2(c.t.peya_onl+c.t.yango)))+kvRow('Total QR',fmt(c.t.loc_qr))+kvRow('Ventas en efectivo',fmt(c.efectivo))+kvRow('(−) Gastos',fmt(c.totalGastos))+kvRow('Efectivo esperado',fmt(c.saldo),'strong')+kvRow('Dinero en sobre',fmt(c.sobre),'strong')+kvRow('Inicio caja chica (aparte)',fmt(d.cajaChica||0)));
+  return h;
+}
 function arqRender(){
   arqRaf=0; if(!draft) return; var d=draft, c=arqCalc(d);
   var setT=function(sel,txt){ document.querySelectorAll(sel).forEach(function(el){ el.textContent=txt; }); };
@@ -3326,32 +3443,11 @@ function arqRender(){
   GV_COLS.forEach(function(col){ var e=document.getElementById('aTot_'+col[0]); if(e) e.textContent=c.t[col[0]]?fmt(c.t[col[0]]):''; });
   var to=document.getElementById('aTotOrd'); if(to) to.textContent=c.nOrd+' órdenes';
   var okc=c.estado==='CUADRADO'?'ok':'bad';
-  document.getElementById('aKpis').innerHTML=akpi('Ventas del día',bs(c.ventasExcel))+akpi('Órdenes',c.nOrd)+akpi('Gastos',bs(c.totalGastos))+akpi('Efectivo esperado',bs(c.saldo))+akpi('Dinero en sobre',bs(c.sobre))+akpi('Resultado',c.estado+(c.estado!=='CUADRADO'?' · '+bs(Math.abs(c.dif)):''),okc);
-  // reporte de ventas: filas = tipo de pago, columnas = marcas
-  var MS=arqMarcas(d), CAN=gvSuc(d.suc).canales;
-  var cell=function(k,cols,what){ var s=0; cols.forEach(function(col){ var b=c.by[k][col]; if(b) s+=b[what]; }); return s; };
-  var grp=function(nombre,cls,rows,totCols){
-    if(CAN.indexOf(cls)<0) return '';
-    var MK=MS.filter(function(k){ return GV_MK[k].canales.indexOf(cls)>=0; });
-    rows=rows.filter(function(r){ return r[1][0]!=='peya_otros' || c.t.peya_otros; });
-    var h='<div class="rgrp"><div class="rgh"><span class="gchip '+cls+'">'+nombre+'</span></div><table class="rtab"><thead><tr><th></th>'+MK.map(function(k){return '<th><i class="mkdot" style="background:'+GV_MK[k].c+'"></i>'+esc(GV_MK[k].n)+'</th>';}).join('')+'<th>Total</th></tr></thead><tbody>';
-    rows.forEach(function(r){ var t=0; h+='<tr><td>'+r[0]+'</td>'+MK.map(function(k){ var v=cell(k,r[1],'v'); t+=v; return '<td class="mono">'+(v?fmt(v):'<span class="z">0</span>')+'</td>'; }).join('')+'<td class="mono">'+fmt(t)+'</td></tr>'; });
-    var tt=0,tn=0; h+='<tr class="rtot"><td>Total ventas</td>'+MK.map(function(k){ var v=cell(k,totCols,'v'); tt+=v; return '<td class="mono">'+fmt(v)+'</td>'; }).join('')+'<td class="mono">'+fmt(tt)+'</td></tr>';
-    h+='<tr class="rcnt"><td>Pedidos</td>'+MK.map(function(k){ var n=cell(k,totCols,'n'); tn+=n; return '<td class="mono">'+n+'</td>'; }).join('')+'<td class="mono">'+tn+'</td></tr>';
-    return h+'</tbody></table></div>';
-  };
-  document.getElementById('aRep').innerHTML=
-    grp('PedidosYa','peya',[['Efectivo',['peya_efe']],['Online',['peya_onl']],['Vouchers',['peya_vou']],['Dscto. promoción',['peya_promo']],['Otros dsctos.',['peya_otros']]],['peya_efe','peya_onl'])+
-    grp('YANGO','yango',[['Online',['yango']]],['yango'])+
-    grp('Local','loc',[['Efectivo',['loc_efe']],['Tarjeta (POS)',['loc_pos']],['Transferencia / QR',['loc_qr']]],['loc_efe','loc_pos','loc_qr']);
-  // datos del arqueo
-  var h='<div class="ksec">Control de ventas</div>'+kvRow('Ventas en Control Facilito',c.facil?fmt(c.facil):'—')+kvRow('Ventas según el sistema',fmt(c.ventasExcel))+'<div class="kv"><span>Diferencia</span>'+estBadge(c.estadoFacil,c.difFacil)+'</div>';
-  var tiene=function(g){ return CAN.indexOf(g)>=0; };
-  h+='<div class="ksec">Ventas por canal</div>'+(tiene('peya')?kvRow('PedidosYa',fmt(c.ventasPeya)):'')+kvRow('Local',fmt(c.ventasLocal))+(tiene('yango')?kvRow('YANGO',fmt(c.ventasYango)):'');
-  h+='<div class="ksec">Detalle por tipo de pago</div>'+(tiene('peya')?kvRow('Efectivo PeYa',fmt(c.t.peya_efe))+kvRow('Online PeYa',fmt(c.t.peya_onl))+kvRow('Vouchers PeYa',fmt(c.t.peya_vou))+kvRow('Dscto. promoción PeYa',fmt(c.t.peya_promo))+(c.t.peya_otros?kvRow('Otros dsctos. PeYa',fmt(c.t.peya_otros)):''):'')+(tiene('yango')?kvRow('Online YANGO',fmt(c.t.yango)):'')+kvRow('Efectivo local',fmt(c.t.loc_efe))+kvRow('Tarjeta local',fmt(c.t.loc_pos))+kvRow('Transf./QR local',fmt(c.t.loc_qr));
-  h+='<div class="ksec">Balance del día</div>'+kvRow('Total tarjeta',fmt(c.t.loc_pos))+kvRow('Total online (PeYa + YANGO)',fmt(r2(c.t.peya_onl+c.t.yango)))+kvRow('Total QR',fmt(c.t.loc_qr))+kvRow('Ventas en efectivo',fmt(c.efectivo))+kvRow('(−) Gastos',fmt(c.totalGastos))+kvRow('Efectivo esperado',fmt(c.saldo),'strong')+kvRow('Dinero en sobre',fmt(c.sobre),'strong');
-  h+=kvRow('Inicio caja chica (aparte)',fmt(d.cajaChica||0));
-  document.getElementById('aDat').innerHTML=h;
+  document.getElementById('aKpis').innerHTML=akpi('Ventas del día',bs(c.ventasExcel))+akpi('Efectivo esperado',bs(c.saldo))+akpi('Dinero en sobre',bs(c.sobre))+akpi('Resultado',c.estado+(c.estado!=='CUADRADO'?' · '+bs(Math.abs(c.dif)):''),okc);
+  document.getElementById('aResTab').innerHTML='<tr><td>Órdenes</td><td class="mono">'+c.nOrd+'</td><td class="mono">'+fmt(c.ventasExcel)+'</td></tr><tr><td>Gastos</td><td class="mono">'+nGastos(d)+'</td><td class="mono">'+fmt(c.totalGastos)+'</td></tr>';
+  document.getElementById('aFac').innerHTML=kvRow('Según el sistema',fmt(c.ventasExcel))+'<div class="kv"><span>Diferencia</span>'+estBadge(c.estadoFacil,c.difFacil)+'</div>';
+  document.getElementById('aRep').innerHTML=arqRepHTML(c,d);
+  document.getElementById('aDat').innerHTML=arqDatHTML(c,d);
   // conteo
   GV_DENOMS.forEach(function(dn){ var e=document.getElementById('cs_'+dn[0]); if(e){ var q=num((d.conteo||{})[dn[0]]); e.textContent=q?fmt(q*dn[1]):''; } });
   document.getElementById('aCnt').innerHTML=kvRow('Total dinero en sobre',fmt(c.sobre),'strong')+'<div class="kv"><span>Resultado del arqueo</span>'+estBadge(c.estado,c.dif)+'</div>';
@@ -3361,13 +3457,14 @@ function arqRender(){
 function arqSched(){ if(!arqRaf) arqRaf=requestAnimationFrame(arqRender); }
 
 /* --- gráficos con el mismo estilo del Tablero --- */
-function arqCharts(c,d){
+function arqCharts(c,d){ document.getElementById('aCharts').innerHTML=arqChartsHTML(c,d); }
+function arqChartsHTML(c,d){
   var g='', CAN=gvSuc(d.suc).canales, vis={}; arqCols(d).forEach(function(x){ vis[x[0]]=1; });
   g+=chartPanel('ac_canal','Ventas por canal', svgVBars([{k:'peya',label:'PedidosYa',value:c.ventasPeya},{k:'loc',label:'Local',value:c.ventasLocal},{k:'yango',label:'YANGO',value:c.ventasYango}].filter(function(x){return CAN.indexOf(x.k)>=0;}),'Bs'));
   g+=chartPanel('ac_marca','Ventas por marca', svgVBars(arqMarcas(d).map(function(k){ var s=0; for(var col in c.by[k]){ if(col!=='peya_vou'&&col!=='peya_promo'&&col!=='peya_otros') s+=c.by[k][col].v; } return {label:GV_MK[k].n,value:s}; }),'Bs'));
   g+=chartPanel('ac_tipo','Ventas según tipo de pago', svgHBars([['yango','YANGO',c.t.yango],['peya_efe','Efectivo PeYa',c.t.peya_efe],['peya_onl','Online PeYa',c.t.peya_onl],['peya_vou','Vouchers PeYa',c.t.peya_vou],['peya_promo','Dscto. promo PeYa',c.t.peya_promo],['peya_otros','Otros dsctos. PeYa',c.t.peya_otros],['loc_efe','Efectivo local',c.t.loc_efe],['loc_pos','Tarjeta local',c.t.loc_pos],['loc_qr','Transf./QR local',c.t.loc_qr]].filter(function(x){return vis[x[0]];}).map(function(x){return {label:x[1],value:x[2]};}),'Bs'));
   g+=chartPanel('ac_res','Resumen del arqueo', svgHBars([{label:'Ventas en efectivo',value:c.efectivo},{label:'Gastos',value:c.totalGastos},{label:'Efectivo esperado',value:Math.max(0,c.saldo)},{label:'Dinero en sobre',value:c.sobre}],'Bs'));
-  document.getElementById('aCharts').innerHTML=g;
+  return g;
 }
 function arqFull(id){
   var el=document.getElementById(id); if(!el) return;
@@ -3382,6 +3479,17 @@ function arqBind(){
   sh.addEventListener('input', arqOnInput);
   sh.addEventListener('change', arqOnInput);
   sh.addEventListener('keydown', arqOnKey);
+  sh.addEventListener('click', arqOnClick);
+}
+function arqOnClick(e){
+  var b=e.target.closest('.axbtn, .axmix'); if(!b||!draft||arqRO||b.disabled) return;
+  var r=parseInt(b.getAttribute('data-r'),10), o=draft.ordenes[r]; if(!o) return;
+  if(b.classList.contains('axbtn')){
+    var col=b.getAttribute('data-c'); o.ex=o.ex||{}; o.ex[col]=1;
+    var c=GV_COLS.filter(function(x){return x[0]===col;})[0]; var td=b.parentNode; td.innerHTML=ordCellHTML(o,r,c);
+    var inp=td.querySelector('input'); if(inp) inp.focus();
+  } else { o.mix=!o.mix; arqFilaEstado(r); toast(o.mix?'Pago mixto: puedes usar Efectivo, POS y QR del local en esta orden':'Pago mixto desactivado'); }
+  guardarBorrador();
 }
 function arqOnInput(e){
   var el=e.target, f=el.getAttribute('data-f'); if(!f||!draft) return;
@@ -3394,7 +3502,7 @@ function arqOnInput(e){
       else for(var i=r-1;i>=0;i--){ var kk=mkKey(draft.ordenes[i].m); if(kk && colPermitida(draft,kk,c)){ o.m=draft.ordenes[i].m; break; } }
       if(o.m) arqPintarMarca(r);
     }
-    el.classList.toggle('mal', !!num(v) && !colPermitida(draft,mkKey(o.m),c));
+    arqFilaEstado(r);
     arqCrecer();
   } else if(f==='om'){ draft.ordenes[r].m=v; arqPintarMarca(r); }
   else if(f==='on'){ draft.ordenes[r].n=v; arqCrecer(); }
@@ -3411,12 +3519,7 @@ function arqPintarMarca(r){
   var sel=document.querySelector('#asheet select[data-f="om"][data-r="'+r+'"]'); if(!sel) return;
   var k=mkKey(draft.ordenes[r].m); sel.value=k?GV_MK[k].n:'';
   sel.style.background=k?GV_MK[k].c:''; sel.style.color=k?'#fff':'';
-  // habilita solo los canales de esa marca
-  document.querySelectorAll('#asheet input[data-f="o"][data-r="'+r+'"]').forEach(function(inp){
-    var c=inp.getAttribute('data-c'), ok=colPermitida(draft,k,c), v=num(inp.value);
-    inp.disabled=!ok && !v; inp.title=ok?'':(k?GV_MK[k].n+' no vende por '+GV_GRP[(GV_COLS.filter(function(x){return x[0]===c;})[0]||[])[2]]:'');
-    inp.classList.toggle('mal', !ok && !!v);
-  });
+  arqFilaEstado(r);   // habilita solo los canales de esa marca
 }
 // al cambiar la sucursal: columnas, marcas, número de arqueo y cajero se ajustan solos
 async function arqCambioSuc(){
@@ -3454,8 +3557,9 @@ function arqOnKey(e){
   var t=document.querySelector(sel); if(t){ t.focus(); if(t.select) t.select(); }
 }
 function printArqSheet(){
+  document.querySelectorAll('#asheet .acard.acol').forEach(function(el){ el.classList.remove('acol'); });
   document.body.classList.add('printArq');
-  setTimeout(function(){ window.print(); setTimeout(function(){ document.body.classList.remove('printArq'); },500); },60);
+  setTimeout(function(){ window.print(); setTimeout(function(){ document.body.classList.remove('printArq'); arqColApply(); },500); },60);
 }
 function closeArqSheet(){ arqSel=null; draft=null; arqRO=false; document.body.classList.remove('afullOn'); renderArqueos(); }
 function cancelArqueo(){
@@ -3533,13 +3637,56 @@ async function gvMailPost(payload){
     catch(e2){ return {ok:false,msg:'Sin conexión con el Apps Script.'}; }
   }
 }
-function emailArqueoObj(a){
+async function emailArqueoObj(a){
   var subject='REPORTE DE CIERRE DE CAJA SUCURSAL: '+gvSucName(a.suc).toUpperCase()+' - Arqueo Nro. '+a.nro+' Fecha: '+fullDate(a.fecha);
-  return gvMailPost({html:arqEmailDoc(a),subject:subject,filename:gvSucName(a.suc)+' - Arqueo '+a.nro+'.pdf'});
+  var filename=gvSucName(a.suc)+' - Arqueo '+a.nro+'.pdf', pdf=null;
+  try{ pdf=await arqPdfBase64(a); }catch(e){ console.warn('PDF del arqueo',e); }
+  if(pdf) return gvMailPost({html:arqMailBody(a),pdf:pdf,subject:subject,filename:filename});
+  return gvMailPost({html:arqEmailDoc(a),subject:subject,filename:filename});   // respaldo: PDF simple
 }
-function emailArqueo(id){
+function emailArqueo(id,btn){
   var a=(gvCache[arqSuc]||[]).filter(function(x){return x.id===id;})[0]; if(!a) return;
-  toast('Enviando correo…'); emailArqueoObj(a).then(function(r){ toast(r.ok?'Correo enviado ✓':'No se envió: '+r.msg); });
+  if(btn) btnBusy(btn,'Enviando…');
+  showLoader('Preparando el PDF y enviando el correo…');
+  emailArqueoObj(a).then(function(r){ hideLoader(); if(btn) renderArqueos(); toast(r.ok?'Correo enviado ✓':'No se envió: '+r.msg); });
+}
+// texto del correo (el detalle va en el PDF adjunto)
+function arqMailBody(a){
+  var d=docToDraft(a), c=arqCalc(d), td='style="padding:6px 10px;border-bottom:1px solid #e3e8e5"', tr=function(k,v){ return '<tr><td '+td+'>'+k+'</td><td '+td+' align="right"><b>'+v+'</b></td></tr>'; };
+  return '<div style="font-family:Arial,sans-serif;color:#122036;font-size:13px"><p>Reporte de cierre de caja. El detalle completo y los gráficos van en el PDF adjunto.</p>'
+    +'<table style="border-collapse:collapse;min-width:360px">'+tr('Sucursal',esc(gvSucName(a.suc)))+tr('Arqueo Nro',esc(a.nro))+tr('Fecha',fullDate(a.fecha))+tr('Cajero',esc(a.cajero||'—'))+tr('Turno',esc(a.turno||'—'))
+    +tr('Ventas del día','Bs '+fmt(c.ventasExcel))+tr('Órdenes',c.nOrd)+tr('Gastos','Bs '+fmt(c.totalGastos))+tr('Efectivo esperado','Bs '+fmt(c.saldo))+tr('Dinero en sobre','Bs '+fmt(c.sobre))+tr('Resultado',c.estado+(c.estado!=='CUADRADO'?' · Bs '+fmt(Math.abs(c.dif)):''))+'</table>'
+    +(a.comentarios?'<p><b>Comentarios:</b> '+esc(a.comentarios)+'</p>':'')+'<p style="color:#888;font-size:11px">NUMMEROS by CONTAX</p></div>';
+}
+// PDF horizontal: hoja 1 = Reporte de ventas, Datos del arqueo y Conteo; hoja 2 = los 4 gráficos
+async function arqPdfBase64(a){
+  if(!window.html2canvas) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  if(!(window.jspdf&&window.jspdf.jsPDF)) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  var d=docToDraft(a), c=arqCalc(d), root=document.documentElement, prevTh=root.getAttribute('data-theme');
+  root.setAttribute('data-theme','light');
+  var pm=printMode; printMode=true; var charts; try{ charts=arqChartsHTML(c,d); } finally { printMode=pm; }
+  var head='<div class="ahead" style="margin-bottom:14px"><div class="alogos">'+arqMarcas(d).map(function(k){return '<img src="'+GV_MK[k].logo+'">';}).join('')+'</div><div><div class="t">Arqueo Nro '+esc(a.nro)+' · '+esc(gvSucName(a.suc))+'</div><div class="s">'+fullDate(a.fecha)+' · Cajero: '+esc(a.cajero||'—')+' · Turno: '+esc(a.turno||'—')+' · Resultado: '+c.estado+(c.estado!=='CUADRADO'?' Bs '+fmt(Math.abs(c.dif)):'')+'</div></div></div>';
+  var cnt='<div class="cnlist">'+GV_DENOMS.map(function(dn){ var q=num((d.conteo||{})[dn[0]]); return q?kvRow(dn[2]+' × '+q,fmt(q*dn[1])):''; }).join('')+'</div>'+kvRow('Total dinero en sobre',fmt(c.sobre),'strong')+'<div class="kv"><span>Resultado del arqueo</span>'+estBadge(c.estado,c.dif)+'</div>'+(a.comentarios?'<div class="alab">Comentarios del día</div><div style="font-size:12.5px">'+esc(a.comentarios)+'</div>':'');
+  var box=document.createElement('div');
+  box.id='pdfBox'; box.style.cssText='position:fixed;left:-12000px;top:0;width:1400px;background:#fff;color:#122036';
+  box.innerHTML='<style>#pdfBox *{animation:none!important;transition:none!important}</style><div id="pdfP1" class="arqv" style="padding:26px;background:#fff">'+head+'<div class="a3" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div class="acard"><h3>Reporte de ventas</h3>'+arqRepHTML(c,d)+'</div><div class="acard"><h3>Datos del arqueo</h3>'+arqDatHTML(c,d)+'</div><div class="acard"><h3>Conteo del dinero</h3>'+cnt+'</div></div></div>'
+    +'<div id="pdfP2" class="arqv" style="padding:26px;background:#fff">'+head+'<div class="chartgrid" style="grid-template-columns:repeat(2,minmax(0,1fr))">'+charts+'</div></div>';
+  document.body.appendChild(box);
+  try{
+    await sleep(150);
+    var pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'}), W=297, H=210, M=8;
+    var pages=['pdfP1','pdfP2'];
+    for(var i=0;i<pages.length;i++){
+      var cv=await window.html2canvas(document.getElementById(pages[i]),{scale:1.6,backgroundColor:'#ffffff',useCORS:true,logging:false});
+      var r=Math.min((W-2*M)/cv.width,(H-2*M)/cv.height), w=cv.width*r, h=cv.height*r;
+      if(i) pdf.addPage();
+      pdf.addImage(cv.toDataURL('image/jpeg',0.9),'JPEG',(W-w)/2,M,w,h);
+    }
+    return pdf.output('datauristring').split(',')[1];
+  } finally {
+    box.remove();
+    if(prevTh==null) root.removeAttribute('data-theme'); else root.setAttribute('data-theme',prevTh);
+  }
 }
 function saveArqMail(){ DB.config=DB.config||{}; DB.config.gvMail={url:(document.getElementById('gvMailUrl').value||'').trim(), to:(document.getElementById('gvMailTo').value||'').trim()}; saveLocal(); toast('Configuración de correo guardada'); }
 async function testArqMail(btn){
@@ -3560,6 +3707,18 @@ async function saveArqueo(btn){
   if(sinMarca){ toast('Hay '+sinMarca+' orden(es) sin marca'); return; }
   var malas=[]; draft.ordenes.forEach(function(o,i){ var k=mkKey(o.m); Object.keys(o.a||{}).forEach(function(col){ if(num(o.a[col]) && !colPermitida(draft,k,col)) malas.push(i+1); }); });
   if(malas.length){ toast('Orden #'+malas[0]+': esa marca no vende por ese canal en esta sucursal'); return; }
+  // una orden = un tipo de pago (salvo "Mixto" en el local); voucher/descuento solo en PedidosYa
+  for(var oi=0; oi<draft.ordenes.length; oi++){ var oo=draft.ordenes[oi], aa=oo.a||{};
+    var pays=PAYCOLS.filter(function(x){ return num(aa[x]); });
+    if(pays.length>1 && !(oo.mix && pays.every(function(x){ return colGrp(x)==='loc'; }))){ toast('Orden #'+(oi+1)+': tiene más de un tipo de pago. Una fila = una orden'+(pays.every(function(x){return colGrp(x)==='loc';})?' (o activa "Mixto")':'')+'.'); return; }
+    if(EXTRAS.some(function(x){ return num(aa[x]); }) && pays.some(function(x){ return colGrp(x)!=='peya'; })){ toast('Orden #'+(oi+1)+': el voucher o descuento solo va en pedidos de PedidosYa.'); return; }
+  }
+  // gastos: todas las columnas obligatorias
+  for(var gi=0; gi<draft.gastos.length; gi++){ var gg=draft.gastos[gi];
+    if(!(String(gg.g||'').trim()||num(gg.t)||gg.doc||String(gg.docnro||'').trim()||String(gg.tipo||'').trim())) continue;
+    var falta=[]; if(!String(gg.g||'').trim()) falta.push('descripción'); if(!(num(gg.t)>0)) falta.push('monto'); if(!gg.doc) falta.push('factura o recibo'); if(!String(gg.docnro||'').trim()) falta.push('nro de documento'); if(!String(gg.tipo||'').trim()) falta.push('tipo de gasto');
+    if(falta.length){ toast('Gasto #'+(gi+1)+': falta '+falta.join(', ')); var cg=document.getElementById('cardEgr'); if(cg){ cg.classList.remove('acol'); var gr=cg.querySelector('tr[data-grow="'+gi+'"]'); if(gr) gr.scrollIntoView({block:'center',behavior:'smooth'}); } return; }
+  }
   if(!draft.ordenes.some(function(o){ return Object.keys(o.a||{}).some(function(k){return num(o.a[k]);}); })){ toast('Agrega al menos una orden con importe'); return; }
   var c=computeArqTotals(draft), ac=arqCalc(draft), q={saldo:ac.saldo,sobre:ac.sobre,dif:ac.dif}, id=draft.suc+'_'+draft.nro;
   try{ var cache=await loadArqSuc(draft.suc); if(cache.some(function(a){return a.id===id;})){
@@ -3573,8 +3732,8 @@ async function saveArqueo(btn){
     tEfectivoLocal:c.t.tEfectivoLocal, tTarjetaLocal:c.t.tTarjetaLocal, tTransfQR:c.t.tTransfQR,
     totalGastos:c.totalGastos, saldo:q.saldo, sobre:q.sobre, difArqueo:q.dif, conteo:conteoObj,
     comentarios:draft.comentarios||'', mes:(MONTHS[parseInt(draft.fecha.slice(5,7),10)-1]||'').toLowerCase(),
-    ordenes:draft.ordenes.filter(ordUsada).map(function(o){ var a={}; for(var k in (o.a||{})){ if(num(o.a[k])) a[k]=num(o.a[k]); } var r={m:o.m,a:a}; if(o.n) r.n=o.n; return r; }),
-    gastos:draft.gastos.filter(function(g){return g.g||num(g.t)>0;}).map(function(g){ return {g:g.g,t:num(g.t),tipo:g.tipo||'',doc:g.doc||'',docnro:g.docnro||''}; }),
+    ordenes:draft.ordenes.filter(ordUsada).map(function(o){ var a={}; for(var k in (o.a||{})){ if(num(o.a[k])) a[k]=num(o.a[k]); } var r={m:o.m,a:a}; if(o.n) r.n=o.n; if(o.mix) r.mx=1; return r; }),
+    gastos:draft.gastos.filter(function(g){return String(g.g||'').trim()||num(g.t)>0;}).map(function(g){ return {g:g.g,t:num(g.t),tipo:g.tipo||'',doc:g.doc||'',docnro:g.docnro||''}; }),
     formato:2, estado:'capturado', creadoEn:Date.now(), creadoPor:(session?session.email:''), hechoPor:operadorNombre() };
   btnBusy(btn,'Guardando…');
   showLoader('Guardando arqueo…'); var _ts=Date.now();
@@ -3694,6 +3853,19 @@ async function maybeAutoConnect(){
     }
   }catch(e){}
 }
+
+/* ================= TODO EN MAYÚSCULAS ================= */
+function sinMayus(el){
+  var t=(el.getAttribute('type')||'text').toLowerCase();
+  if(el.tagName==='INPUT' && ['text','search'].indexOf(t)<0) return true;   // email, password, date, number…
+  if(el.classList.contains('nomay')) return true;
+  return /mail|pin|url|config|space|correo|@|http|contrase/i.test((el.id||'')+' '+(el.getAttribute('placeholder')||''));
+}
+document.addEventListener('input',function(e){
+  var el=e.target; if(!el || (el.tagName!=='INPUT' && el.tagName!=='TEXTAREA') || sinMayus(el)) return;
+  var v=el.value, u=v.toUpperCase(); if(v===u) return;
+  var s1=el.selectionStart, s2=el.selectionEnd; el.value=u; try{ el.setSelectionRange(s1,s2); }catch(_){}
+}, true);
 
 /* ================= ARRANQUE ================= */
 (function init(){

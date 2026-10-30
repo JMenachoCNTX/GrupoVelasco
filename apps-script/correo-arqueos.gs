@@ -11,16 +11,17 @@ function doGet() {
   return ContentService.createTextOutput('Servicio de correo de arqueos CONTAX activo.');
 }
 
-// El sistema envía: { html, subject, to, filename }
+// El sistema envía: { html, subject, to, filename, pdf? }
 function doPost(e) {
   try {
     var d = JSON.parse(e.postData.contents);
     var to = String(d.to || '').trim();
     if (!to) throw new Error('Faltan los destinatarios');
     var html = String(d.html || '');
-    var pdf = Utilities.newBlob(html, 'text/html', 'arqueo.html')
-      .getAs('application/pdf')
-      .setName(d.filename || 'arqueo.pdf');
+    // el sistema manda el PDF ya armado (base64); si no viene, se convierte el HTML
+    var pdf = d.pdf
+      ? Utilities.newBlob(Utilities.base64Decode(d.pdf), 'application/pdf', d.filename || 'arqueo.pdf')
+      : Utilities.newBlob(html, 'text/html', 'arqueo.html').getAs('application/pdf').setName(d.filename || 'arqueo.pdf');
     MailApp.sendEmail({
       to: to,
       subject: d.subject || 'Arqueo de caja',
