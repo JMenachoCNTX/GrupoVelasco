@@ -5,7 +5,8 @@ Sistema web interno para:
 - Registrar las **horas trabajadas** del personal por sucursal y semana, y los **pagos** de esas horas.
 - Ver calendario, resumen mensual, tablero con gráficos, horarios y lista de personal.
 - **Arqueos de caja** (cierres de caja): consultar, capturar uno nuevo, contar la caja, generar el PDF y enviarlo por correo (solo administrador).
-  - Desde la v45 el arqueo es una **hoja tipo planilla** (igual a la de Google Sheets que usaban antes): a la izquierda el Detalle de Órdenes (una fila por comanda, marca + importe en la columna del canal) y a la derecha, en vivo, Reporte de Ventas, Datos de Arqueo, Conteo, Egresos y 4 gráficos. Funciones `arqSheetHTML`, `arqCalc`, `arqRender`. El borrador se guarda en el navegador (`gvArqDraft`) hasta pulsar GUARDAR.
+  - Desde la v46 la pestaña Arqueos tiene subpestañas: **Historial Arqueos** (con botón "Ver" que abre el arqueo completo), **Historial Gastos** e **Historial Órdenes** (filtros por día, marca y canal).
+  - El Nuevo arqueo usa tarjetas (no aspecto de planilla), en este orden: cabecera con datos e indicadores → Detalle de órdenes (botón Pantalla completa) → Egresos (Pantalla completa) → Reporte de ventas / Datos del arqueo / Conteo y comentarios → gráficos con el mismo estilo del Tablero (`chartPanel`, `svgVBars`, `svgHBars`). Funciones `arqSheetHTML`, `arqCalc`, `arqRender`. El borrador se guarda en el navegador (`gvArqDraft`) hasta pulsar Guardar.
   - Logos de marcas en `assets/marcas/`. "Dinero en sobre" = lo contado en el conteo (la caja chica va aparte).
 
 Pestañas: Inicio, Semana, Calendario, Resumen, Tablero, Horarios, Personal, Arqueos (solo admin), Ajustes.
