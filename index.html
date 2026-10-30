@@ -865,13 +865,13 @@
 
   <nav class="tabs" id="tabs">
     <button data-scr="Home" class="on" onclick="showTab('Home')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></span>Inicio</button>
+    <button data-scr="Arq" id="tabArq" onclick="showTab('Arq')" style="display:none"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21z"/><path d="M9 8h6M9 12h6"/></svg></span>Arqueos</button>
     <button data-scr="Week" onclick="showTab('Week')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span>Semana</button>
     <button data-scr="Cal" onclick="showTab('Cal')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span>Calendario</button>
     <button data-scr="Month" onclick="showTab('Month')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/><path d="M4 20h17"/></svg></span>Resumen</button>
     <button data-scr="Rep" onclick="showTab('Rep')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M4 20h16"/><path d="M4 15l5-5 4 3 7-8"/></svg></span>Tablero</button>
     <button data-scr="Sched" id="tabSched" onclick="showTab('Sched')" style="display:none"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3.2h6V5H9z"/><path d="M8.5 11h7M8.5 15h5"/></svg></span>Horarios</button>
     <button data-scr="Staff" onclick="showTab('Staff')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 6.2a3 3 0 0 1 0 5.6M16.5 19a5.5 5.5 0 0 0-2-4.3"/></svg></span>Personal</button>
-    <button data-scr="Arq" id="tabArq" onclick="showTab('Arq')" style="display:none"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21z"/><path d="M9 8h6M9 12h6"/></svg></span>Arqueos</button>
     <button data-scr="Set" onclick="showTab('Set')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>Ajustes</button>
   </nav>
 </div>
@@ -920,7 +920,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v50';
+var APP_VERSION = 'v51';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -3051,7 +3051,7 @@ function weekHours(){
 // br = sucursal de Personal · canales y marcas que vende cada sucursal
 var GV_SUC=[{id:'equipetrol_mp',name:'Equipetrol–Memphis',br:'memphis',canales:['peya','yango','loc'],marcas:['sushiflash','noahs','memphis']},
   {id:'equipetrol_sf',name:'Equipetrol–SushiFlash',br:'sushiflash',canales:['loc'],marcas:['sushiflash']},
-  {id:'sarao',name:'Sarao',br:'sarao',canales:['peya','yango','loc'],marcas:['sushiflash','noahs','memphis']},
+  {id:'sarao',name:'Sarao',br:'sarao',nroIni:1000,canales:['peya','yango','loc'],marcas:['sushiflash','noahs','memphis']},
   {id:'cine',name:'Cine (cerrada)',br:'cine',canales:['peya','yango','loc'],marcas:['sushiflash','noahs','memphis']}];
 function gvSuc(id){ return GV_SUC.filter(function(x){return x.id===id;})[0]||GV_SUC[0]; }
 var GV_CANAL={peya_efe:'PeYa Efectivo',peya_onl:'PeYa Online',peya_vou:'Voucher',peya_promo:'Dscto Promo',peya_otros:'Otros Dsctos',yango:'Yango',loc_efe:'Local Efectivo',loc_pos:'POS',loc_qr:'QR'};
@@ -3194,7 +3194,8 @@ function hoyISO(){ var t=new Date(); return t.getFullYear()+'-'+pad(t.getMonth()
 // el arqueo lleva la fecha en que se ABRIÓ la caja: si se cierra de madrugada (antes de las 6:00) es del día anterior
 var ARQ_HORA_CORTE=6;
 function fechaApertura(){ var t=new Date(); if(t.getHours()<ARQ_HORA_CORTE) t.setDate(t.getDate()-1); return t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate()); }
-async function nextNro(suc){ try{ var cache=await loadArqSuc(suc); var mx=0; cache.forEach(function(a){var n=parseInt(a.nro)||0;if(n>mx)mx=n;}); return String(mx+1); }catch(e){ return ''; } }
+// siguiente número = último de la sucursal + 1 (nroIni = primer número de una sucursal sin arqueos)
+async function nextNro(suc){ try{ var cache=await loadArqSuc(suc); var mx=(gvSuc(suc).nroIni||1)-1; cache.forEach(function(a){var n=parseInt(a.nro)||0;if(n>mx)mx=n;}); return String(mx+1); }catch(e){ return ''; } }
 // cajeros de la sucursal según Personal (cargo "Cajero"); si no hay, todo el personal activo
 function cajerosDe(suc){
   var br=gvSuc(suc).br, act=Object.keys(DB.employees||{}).map(function(id){return DB.employees[id];}).filter(function(e){ return e.branch===br && e.active; });
@@ -3556,7 +3557,21 @@ function arqOnKey(e){
   var sel='#asheet [data-f="'+f+'"][data-r="'+r+'"]'+(el.getAttribute('data-c')?'[data-c="'+el.getAttribute('data-c')+'"]':'');
   var t=document.querySelector(sel); if(t){ t.focus(); if(t.select) t.select(); }
 }
-function printArqSheet(){
+// Imprimir / PDF: el mismo PDF membretado que llega por correo
+async function printArqSheet(){
+  var a=draft&&draft._doc;
+  if(a){
+    showLoader('Preparando el PDF…');
+    try{
+      var pdf=await arqPdfDoc(a), name=gvSucName(a.suc)+' - Arqueo '+a.nro+'.pdf'; hideLoader();
+      var w=null; try{ w=window.open(pdf.output('bloburl'),'_blank'); }catch(e){}
+      if(!w) pdf.save(name);   // si el navegador bloquea la ventana, se descarga
+      return;
+    }catch(e){ hideLoader(); console.warn('PDF',e); toast('No se pudo armar el PDF; se imprime la pantalla'); }
+  }
+  printArqPantalla();
+}
+function printArqPantalla(){
   document.querySelectorAll('#asheet .acard.acol').forEach(function(el){ el.classList.remove('acol'); });
   document.body.classList.add('printArq');
   setTimeout(function(){ window.print(); setTimeout(function(){ document.body.classList.remove('printArq'); arqColApply(); },500); },60);
@@ -3659,18 +3674,25 @@ function arqMailBody(a){
     +(a.comentarios?'<p><b>Comentarios:</b> '+esc(a.comentarios)+'</p>':'')+'<p style="color:#888;font-size:11px">NUMMEROS by CONTAX</p></div>';
 }
 // PDF horizontal: hoja 1 = Reporte de ventas, Datos del arqueo y Conteo; hoja 2 = los 4 gráficos
-async function arqPdfBase64(a){
+async function arqPdfBase64(a){ return (await arqPdfDoc(a)).output('datauristring').split(',')[1]; }
+async function arqPdfDoc(a){
   if(!window.html2canvas) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
   if(!(window.jspdf&&window.jspdf.jsPDF)) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
   var d=docToDraft(a), c=arqCalc(d), root=document.documentElement, prevTh=root.getAttribute('data-theme');
   root.setAttribute('data-theme','light');
   var pm=printMode; printMode=true; var charts; try{ charts=arqChartsHTML(c,d); } finally { printMode=pm; }
-  var head='<div class="ahead" style="margin-bottom:14px"><div class="alogos">'+arqMarcas(d).map(function(k){return '<img src="'+GV_MK[k].logo+'">';}).join('')+'</div><div><div class="t">Arqueo Nro '+esc(a.nro)+' · '+esc(gvSucName(a.suc))+'</div><div class="s">'+fullDate(a.fecha)+' · Cajero: '+esc(a.cajero||'—')+' · Turno: '+esc(a.turno||'—')+' · Resultado: '+c.estado+(c.estado!=='CUADRADO'?' Bs '+fmt(Math.abs(c.dif)):'')+'</div></div></div>';
+  // hoja membretada NUMMEROS (igual que los demás PDF del sistema)
+  var head='<div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #235347;padding-bottom:12px;margin-bottom:16px">'
+    +'<img src="'+CONTAX_LOGO+'" style="height:40px;width:auto">'
+    +'<div><div style="font-size:20px;font-weight:800;color:#163832;line-height:1.2">REPORTE DE CIERRE DE CAJA · ARQUEO NRO '+esc(a.nro)+'</div>'
+    +'<div style="font-size:12.5px;color:#7b8aa0;margin-top:3px">'+esc(gvSucName(a.suc))+' · '+fullDate(a.fecha)+' · Cajero: '+esc(a.cajero||'—')+' · Turno: '+esc(a.turno||'—')+' · Resultado: <b style="color:'+(c.estado==='CUADRADO'?'#1d6b40':'#b42318')+'">'+c.estado+(c.estado!=='CUADRADO'?' Bs '+fmt(Math.abs(c.dif)):'')+'</b></div></div>'
+    +'<span style="flex:1"></span><div class="alogos">'+arqMarcas(d).map(function(k){return '<img src="'+GV_MK[k].logo+'">';}).join('')+'</div></div>';
+  var pie=function(n){ return '<div style="margin-top:16px;border-top:1px solid #e3ddce;padding-top:7px;font-size:11px;color:#7b8aa0;display:flex;justify-content:space-between"><span><b style="color:#235347">NUMMEROS</b> by CONTAX · Sistemas a la medida de tu empresa.</span><span>Hoja '+n+' de 2</span></div>'; };
   var cnt='<div class="cnlist">'+GV_DENOMS.map(function(dn){ var q=num((d.conteo||{})[dn[0]]); return q?kvRow(dn[2]+' × '+q,fmt(q*dn[1])):''; }).join('')+'</div>'+kvRow('Total dinero en sobre',fmt(c.sobre),'strong')+'<div class="kv"><span>Resultado del arqueo</span>'+estBadge(c.estado,c.dif)+'</div>'+(a.comentarios?'<div class="alab">Comentarios del día</div><div style="font-size:12.5px">'+esc(a.comentarios)+'</div>':'');
   var box=document.createElement('div');
   box.id='pdfBox'; box.style.cssText='position:fixed;left:-12000px;top:0;width:1400px;background:#fff;color:#122036';
-  box.innerHTML='<style>#pdfBox *{animation:none!important;transition:none!important}</style><div id="pdfP1" class="arqv" style="padding:26px;background:#fff">'+head+'<div class="a3" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div class="acard"><h3>Reporte de ventas</h3>'+arqRepHTML(c,d)+'</div><div class="acard"><h3>Datos del arqueo</h3>'+arqDatHTML(c,d)+'</div><div class="acard"><h3>Conteo del dinero</h3>'+cnt+'</div></div></div>'
-    +'<div id="pdfP2" class="arqv" style="padding:26px;background:#fff">'+head+'<div class="chartgrid" style="grid-template-columns:repeat(2,minmax(0,1fr))">'+charts+'</div></div>';
+  box.innerHTML='<style>#pdfBox *{animation:none!important;transition:none!important}</style><div id="pdfP1" class="arqv" style="padding:26px;background:#fff">'+head+'<div class="a3" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div class="acard"><h3>Reporte de ventas</h3>'+arqRepHTML(c,d)+'</div><div class="acard"><h3>Datos del arqueo</h3>'+arqDatHTML(c,d)+'</div><div class="acard"><h3>Conteo del dinero</h3>'+cnt+'</div></div>'+pie(1)+'</div>'
+    +'<div id="pdfP2" class="arqv" style="padding:26px;background:#fff">'+head+'<div class="chartgrid" style="grid-template-columns:repeat(2,minmax(0,1fr))">'+charts+'</div>'+pie(2)+'</div>';
   document.body.appendChild(box);
   try{
     await sleep(150);
@@ -3682,7 +3704,7 @@ async function arqPdfBase64(a){
       if(i) pdf.addPage();
       pdf.addImage(cv.toDataURL('image/jpeg',0.9),'JPEG',(W-w)/2,M,w,h);
     }
-    return pdf.output('datauristring').split(',')[1];
+    return pdf;
   } finally {
     box.remove();
     if(prevTh==null) root.removeAttribute('data-theme'); else root.setAttribute('data-theme',prevTh);
