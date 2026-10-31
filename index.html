@@ -942,7 +942,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v54';
+var APP_VERSION = 'v55';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -3242,7 +3242,7 @@ function arqCols(d){
 }
 function arqMarcas(d){ return gvSuc(d.suc).marcas; }
 var PEYA_COLS=['peya_efe','peya_onl','peya_vou','peya_promo','peya_otros'];
-var PEYA_CAMPOS=[['n','Cant. órdenes'],['onl','Online'],['efe','Efectivo'],['vou','Voucher'],['promo','Dscto promo']];
+var PEYA_CAMPOS=[['n','Cant. órdenes'],['onl','Total vendido (Bs)']];
 var PEYA_MAP={onl:'peya_onl',efe:'peya_efe',vou:'peya_vou',promo:'peya_promo'};
 function marcasPeya(d){ return gvSuc(d.suc).canales.indexOf('peya')<0 ? [] : arqMarcas(d).filter(function(k){ return GV_MK[k].canales.indexOf('peya')>=0; }); }
 // líneas de PedidosYa (totales por marca) para listas y reportes; la cantidad de órdenes va en la primera línea de cada marca
@@ -3336,7 +3336,10 @@ function arqCalc(d){
   var ventasPeya=r2(t.peya_efe+t.peya_onl), ventasLocal=r2(t.loc_efe+t.loc_pos+t.loc_qr), ventasYango=t.yango;
   var ventasExcel=r2(ventasPeya+ventasLocal+ventasYango);
   var totalGastos=r2(d.gastos.reduce(function(s,g){return s+num(g.t);},0));
-  var efectivo=r2(t.loc_efe+t.peya_efe), saldo=r2(efectivo-totalGastos);
+  // PedidosYa cobra todo (también el efectivo, por el repartidor): a la caja solo entra el efectivo del local.
+  // Los arqueos guardados antes de la v55 (formato 2) sumaban el efectivo de PeYa: se muestran como se guardaron.
+  var antiguo=d._doc && (d._doc.formato||0)<3;
+  var efectivo=r2(t.loc_efe+(antiguo?t.peya_efe:0)), saldo=(antiguo&&d._doc.saldo!=null)?r2(d._doc.saldo):r2(efectivo-totalGastos);
   var ro=d._doc;
   var sobre=(ro&&ro.sobre!=null)?r2(ro.sobre):conteoTotal(d.conteo);
   var dif=(ro&&ro.difArqueo!=null)?r2(ro.difArqueo):r2(sobre-saldo);
@@ -3444,8 +3447,8 @@ function arqSheetHTML(d){
   // --- PedidosYa: total por marca
   var mp=marcasPeya(d);
   if(mp.length && (!ro || Object.keys(d.peya||{}).length)){
-    h+='<div class="acard" id="cardPeya"><h3><span class="gchip peya">PedidosYa</span> Totales del día por marca'+(ro?'':'<span class="ahint">Los pedidos de PedidosYa ya entran solos a Control Facilito: aquí solo va la cantidad de órdenes y el total de cada marca (sácalo del reporte de Control Facilito).</span>')+'<span class="sp"></span>'+colBtn('cardPeya')+'</h3>';
-    h+='<div style="overflow-x:auto"><table class="aot peyat"><thead><tr><th>Marca</th>'+PEYA_CAMPOS.map(function(c){return '<th>'+c[1]+'</th>';}).join('')+'<th>Total ventas</th></tr></thead><tbody>';
+    h+='<div class="acard" id="cardPeya"><h3><span class="gchip peya">PedidosYa</span> Totales del día por marca'+(ro?'':'<span class="ahint">PedidosYa cobra todo (online y efectivo) y paga cada semana: aquí solo va la cantidad de órdenes y el total vendido de cada marca, según el reporte de Control Facilito. No entra a la caja.</span>')+'<span class="sp"></span>'+colBtn('cardPeya')+'</h3>';
+    h+='<div style="overflow-x:auto"><table class="aot peyat"><thead><tr><th>Marca</th>'+PEYA_CAMPOS.map(function(c){return '<th>'+c[1]+'</th>';}).join('')+'<th>Ticket promedio</th></tr></thead><tbody>';
     mp.forEach(function(k){ var x=(d.peya||{})[k]||{};
       h+='<tr><td><span class="mkpill" style="background:'+GV_MK[k].c+'">'+esc(GV_MK[k].n)+'</span></td>'+PEYA_CAMPOS.map(function(c){ return '<td>'+aIn('py',null,c[0],num(x[c[0]])?x[c[0]]:'',{num:1,cls:'n',ph:'0'}).replace('data-f="py"','data-f="py" data-k="'+k+'"')+'</td>'; }).join('')+'<td class="mono r" id="pyT_'+k+'"></td></tr>'; });
     h+='</tbody><tfoot><tr><td>Total</td>'+PEYA_CAMPOS.map(function(c){return '<td class="n" id="pyS_'+c[0]+'"></td>';}).join('')+'<td class="n" id="pyS_tot"></td></tr></tfoot></table></div></div>';
@@ -3501,7 +3504,7 @@ function arqRepHTML(c,d){
   var grp=function(nombre,cls,rows,totCols){
     if(CAN.indexOf(cls)<0) return '';
     var MK=MS.filter(function(k){ return GV_MK[k].canales.indexOf(cls)>=0; });
-    rows=rows.filter(function(r){ return r[1][0]!=='peya_otros' || c.t.peya_otros; });
+    rows=rows.filter(function(r){ return ['peya_efe','peya_vou','peya_promo','peya_otros'].indexOf(r[1][0])<0 || c.t[r[1][0]]; });
     var h='<div class="rgrp"><div class="rgh"><span class="gchip '+cls+'">'+nombre+'</span></div><table class="rtab"><thead><tr><th></th>'+MK.map(function(k){return '<th><i class="mkdot" style="background:'+GV_MK[k].c+'"></i>'+esc(GV_MK[k].n)+'</th>';}).join('')+'<th>Total</th></tr></thead><tbody>';
     rows.forEach(function(r){ var t=0; h+='<tr><td>'+r[0]+'</td>'+MK.map(function(k){ var v=cell(k,r[1]); t+=v; return '<td class="mono">'+(v?fmt(v):'<span class="z">0</span>')+'</td>'; }).join('')+'<td class="mono">'+fmt(t)+'</td></tr>'; });
     var tt=0,tn=0; h+='<tr class="rtot"><td>Total ventas</td>'+MK.map(function(k){ var v=cell(k,totCols); tt+=v; return '<td class="mono">'+fmt(v)+'</td>'; }).join('')+'<td class="mono">'+fmt(tt)+'</td></tr>';
@@ -3518,7 +3521,7 @@ function arqDatHTML(c,d){
   var sec=function(t,body){ return '<div class="rgrp kgrp"><div class="rgh"><span class="gchip kc">'+t+'</span></div>'+body+'</div>'; };
   var h=sec('Control de ventas',kvRow('Ventas en Control Facilito',c.facil?fmt(c.facil):'—')+kvRow('Ventas según el sistema',fmt(c.ventasExcel))+'<div class="kv"><span>Diferencia</span>'+estBadge(c.estadoFacil,c.difFacil)+'</div>');
   h+=sec('Ventas por canal',(tiene('peya')?kvRow('PedidosYa',fmt(c.ventasPeya)):'')+kvRow('Local',fmt(c.ventasLocal))+(tiene('yango')?kvRow('YANGO',fmt(c.ventasYango)):''));
-  h+=sec('Detalle por tipo de pago',(tiene('peya')?kvRow('Efectivo PeYa',fmt(c.t.peya_efe))+kvRow('Online PeYa',fmt(c.t.peya_onl))+kvRow('Vouchers PeYa',fmt(c.t.peya_vou))+kvRow('Dscto. promoción PeYa',fmt(c.t.peya_promo))+(c.t.peya_otros?kvRow('Otros dsctos. PeYa',fmt(c.t.peya_otros)):''):'')+(tiene('yango')?kvRow('Online YANGO',fmt(c.t.yango)):'')+kvRow('Efectivo local',fmt(c.t.loc_efe))+kvRow('Tarjeta local',fmt(c.t.loc_pos))+kvRow('Transf./QR local',fmt(c.t.loc_qr)));
+  h+=sec('Detalle por tipo de pago',(tiene('peya')?kvRow('PedidosYa (lo cobra PedidosYa)',fmt(c.t.peya_onl))+(c.t.peya_efe?kvRow('Efectivo PeYa',fmt(c.t.peya_efe)):'')+(c.t.peya_vou?kvRow('Vouchers PeYa',fmt(c.t.peya_vou)):'')+(c.t.peya_promo?kvRow('Dscto. promoción PeYa',fmt(c.t.peya_promo)):'')+(c.t.peya_otros?kvRow('Otros dsctos. PeYa',fmt(c.t.peya_otros)):''):'')+(tiene('yango')?kvRow('Online YANGO',fmt(c.t.yango)):'')+kvRow('Efectivo local',fmt(c.t.loc_efe))+kvRow('Tarjeta local',fmt(c.t.loc_pos))+kvRow('Transf./QR local',fmt(c.t.loc_qr)));
   h+=sec('Balance del día',kvRow('Total tarjeta',fmt(c.t.loc_pos))+kvRow('Total online (PeYa + YANGO)',fmt(r2(c.t.peya_onl+c.t.yango)))+kvRow('Total QR',fmt(c.t.loc_qr))+kvRow('Ventas en efectivo',fmt(c.efectivo))+kvRow('(−) Gastos',fmt(c.totalGastos))+kvRow('Efectivo esperado',fmt(c.saldo),'strong')+kvRow('Dinero en sobre',fmt(c.sobre),'strong')+kvRow('Inicio caja chica (aparte)',fmt(d.cajaChica||0)));
   return h;
 }
@@ -3542,10 +3545,10 @@ function arqRender(){
   document.getElementById('aCnt').innerHTML=kvRow('Total dinero en sobre',fmt(c.sobre),'strong')+'<div class="kv"><span>Resultado del arqueo</span>'+estBadge(c.estado,c.dif)+'</div>';
   document.getElementById('aEgrTot').textContent=bs(c.totalGastos);
   // totales del bloque PedidosYa
-  if(document.getElementById('pyS_tot')){ var S={n:0,onl:0,efe:0,vou:0,promo:0,tot:0};
-    marcasPeya(d).forEach(function(k){ var x=(d.peya||{})[k]||{}, tv=num(x.onl)+num(x.efe); PEYA_CAMPOS.forEach(function(cc){ S[cc[0]]+=num(x[cc[0]]); }); S.tot+=tv; var e=document.getElementById('pyT_'+k); if(e) e.textContent=tv?fmt(tv):''; });
-    PEYA_CAMPOS.forEach(function(cc){ var e=document.getElementById('pyS_'+cc[0]); if(e) e.textContent=S[cc[0]]?(cc[0]==='n'?Math.round(S.n):fmt(S[cc[0]])):''; });
-    document.getElementById('pyS_tot').textContent=S.tot?fmt(S.tot):''; }
+  if(document.getElementById('pyS_tot')){ var S={n:0,onl:0};
+    marcasPeya(d).forEach(function(k){ var x=(d.peya||{})[k]||{}, tv=num(x.onl)+num(x.efe), n=num(x.n); S.n+=n; S.onl+=tv; var e=document.getElementById('pyT_'+k); if(e) e.textContent=(tv&&n)?fmt(tv/n):''; });
+    var en=document.getElementById('pyS_n'); if(en) en.textContent=S.n?Math.round(S.n):''; var eo=document.getElementById('pyS_onl'); if(eo) eo.textContent=S.onl?fmt(S.onl):'';
+    document.getElementById('pyS_tot').textContent=(S.n&&S.onl)?fmt(S.onl/S.n):''; }
   arqCharts(c,d);
 }
 function arqSched(){ if(!arqRaf) arqRaf=requestAnimationFrame(arqRender); }
@@ -3553,7 +3556,7 @@ function arqSched(){ if(!arqRaf) arqRaf=requestAnimationFrame(arqRender); }
 /* --- gráficos con el mismo estilo del Tablero --- */
 function arqCharts(c,d){ document.getElementById('aCharts').innerHTML=arqChartsHTML(c,d); }
 function arqChartsHTML(c,d){
-  var g='', CAN=gvSuc(d.suc).canales, vis={}; arqCols(d).forEach(function(x){ vis[x[0]]=1; });
+  var g='', CAN=gvSuc(d.suc).canales, vis={}; arqCols(d).forEach(function(x){ vis[x[0]]=1; }); PEYA_COLS.forEach(function(pc){ if(c.t[pc]) vis[pc]=1; });
   g+=chartPanel('ac_canal','Ventas por canal', svgVBars([{k:'peya',label:'PedidosYa',value:c.ventasPeya},{k:'loc',label:'Local',value:c.ventasLocal},{k:'yango',label:'YANGO',value:c.ventasYango}].filter(function(x){return CAN.indexOf(x.k)>=0;}),'Bs'));
   g+=chartPanel('ac_marca','Ventas por marca', svgVBars(arqMarcas(d).map(function(k){ var s=0; for(var col in c.by[k]){ if(col!=='peya_vou'&&col!=='peya_promo'&&col!=='peya_otros') s+=c.by[k][col].v; } return {label:GV_MK[k].n,value:s}; }),'Bs'));
   g+=chartPanel('ac_tipo','Ventas según tipo de pago', svgHBars([['yango','YANGO',c.t.yango],['peya_efe','Efectivo PeYa',c.t.peya_efe],['peya_onl','Online PeYa',c.t.peya_onl],['peya_vou','Vouchers PeYa',c.t.peya_vou],['peya_promo','Dscto. promo PeYa',c.t.peya_promo],['peya_otros','Otros dsctos. PeYa',c.t.peya_otros],['loc_efe','Efectivo local',c.t.loc_efe],['loc_pos','Tarjeta local',c.t.loc_pos],['loc_qr','Transf./QR local',c.t.loc_qr]].filter(function(x){return vis[x[0]];}).map(function(x){return {label:x[1],value:x[2]};}),'Bs'));
@@ -3788,7 +3791,7 @@ function ticketHTML(a){
     +r('NRO DE ARQUEO','<b class="big">'+esc(a.nro)+'</b>')+r('INICIO - FIN TURNO',esc(a.turno||'—'))+r('INICIO CAJA CHICA',fmt(d.cajaChica||0))+r('FECHA',fullDate(a.fecha))+r('SUCURSAL',esc(gvSucName(a.suc).toUpperCase()))+r('CAJERO',esc(a.cajero||'—'))+'</table>';
   h+='<h2>DETALLE TRANSACCIONAL</h2><table class="bx">'+r('VENTAS EN CONTROL FACILITO',c.facil?fmt(c.facil):'—')+r('VENTAS SEGÚN SISTEMA',fmt(c.ventasExcel))+r(c.estadoFacil==='SIN DATO'?'DIFERENCIA':c.estadoFacil,fmt(Math.abs(c.difFacil)),1)
     +(tiene('peya')?r('VENTAS POR PEDIDOSYA',fmt(c.ventasPeya)):'')+r('VENTAS POR LOCAL',fmt(c.ventasLocal))+(tiene('yango')?r('VENTAS POR YANGO',fmt(c.ventasYango)):'')
-    +(tiene('peya')?r('EFECTIVO PEYA',fmt(c.t.peya_efe))+r('ONLINE PEYA',fmt(c.t.peya_onl))+r('VOUCHERS PEYA',fmt(c.t.peya_vou))+r('DSCTO. PROMO PEYA',fmt(c.t.peya_promo)):'')
+    +(tiene('peya')?(c.t.peya_efe?r('EFECTIVO PEYA',fmt(c.t.peya_efe)):'')+r('PEDIDOSYA (LO COBRA PEYA)',fmt(c.t.peya_onl))+(c.t.peya_vou?r('VOUCHERS PEYA',fmt(c.t.peya_vou)):'')+(c.t.peya_promo?r('DSCTO. PROMO PEYA',fmt(c.t.peya_promo)):''):'')
     +(tiene('yango')?r('ONLINE YANGO',fmt(c.t.yango)):'')+r('EFECTIVO LOCAL',fmt(c.t.loc_efe))+r('TARJETA LOCAL',fmt(c.t.loc_pos))+r('TRANSF./QR LOCAL',fmt(c.t.loc_qr))+'</table>';
   h+='<h2>BALANCE DEL DÍA</h2><table class="bx">'+r('TOTAL TARJETA',fmt(c.t.loc_pos))+r('TOTAL ONLINE (PEYA + YANGO)',fmt(r2(c.t.peya_onl+c.t.yango)))+r('TOTAL QR',fmt(c.t.loc_qr))+r('TOTAL VENTAS EFECTIVO',fmt(c.efectivo))+r('TOTAL GASTOS',fmt(c.totalGastos))+r('EFECTIVO ESPERADO',fmt(c.saldo),1)+r('DINERO EN SOBRE',fmt(c.sobre),1)+'</table>';
   h+='<div class="cut"></div><h1>CONTEO DE ARQUEO NRO '+esc(a.nro)+'</h1><table class="bx"><tr class="hd"><td>TIPO</td><td class="n">CORTE</td><td class="n">CANT.</td></tr>'
@@ -4006,7 +4009,7 @@ async function saveArqueo(btn){
   // PedidosYa: si hay importe tiene que haber cantidad de órdenes, y al revés
   for(var pk2 in (draft.peya||{})){ var px2=draft.peya[pk2], imp=num(px2.onl)+num(px2.efe);
     if(imp && !(num(px2.n)>0)){ toast('PedidosYa '+GV_MK[pk2].n+': falta la cantidad de órdenes'); return; }
-    if(num(px2.n)>0 && !imp){ toast('PedidosYa '+GV_MK[pk2].n+': falta el importe (online o efectivo)'); return; } }
+    if(num(px2.n)>0 && !imp){ toast('PedidosYa '+GV_MK[pk2].n+': falta el total vendido'); return; } }
   // Nro automático: se vuelve a leer de la nube al guardar (por si otra caja guardó antes) = último + 1
   delete gvCache[draft.suc];
   var nro=await nextNro(draft.suc);
@@ -4026,7 +4029,7 @@ async function saveArqueo(btn){
     peya:(function(){ var o={}; Object.keys(draft.peya||{}).forEach(function(k){ var x=draft.peya[k], y={}; ['n','onl','efe','vou','promo'].forEach(function(f){ if(num(x[f])) y[f]=num(x[f]); }); if(Object.keys(y).length) o[k]=y; }); return o; })(),
     gastos:draft.gastos.filter(function(g){return String(g.g||'').trim()||num(g.t)>0;}).map(function(g){ return {g:g.g,t:num(g.t),tipo:g.tipo||'',doc:g.doc||'',docnro:g.docnro||''}; }),
     facDatos:draft.facDatos||null, facFoto:(draft._facFotoRef||null), posDatos:draft.posDatos||null, posFoto:(draft._posFotoRef||null),
-    formato:2, estado:'capturado', creadoEn:Date.now(), creadoPor:(session?session.email:''), hechoPor:operadorNombre() };
+    formato:3, estado:'capturado', creadoEn:Date.now(), creadoPor:(session?session.email:''), hechoPor:operadorNombre() };
   btnBusy(btn,'Guardando…');
   showLoader('Guardando arqueo…'); var _ts=Date.now();
   for(var ft in FOTO){ var FF=FOTO[ft];
