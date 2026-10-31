@@ -17,11 +17,14 @@ function doGet() {
 
 function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
-// El sistema envía: { accion?, html, subject, to, filename, pdf?, fotoId? }
+// El sistema envía: { accion?, html, subject, to, filename, pdf?, fotoIds? }
 function doPost(e) {
   var d;
   try { d = JSON.parse(e.postData.contents); } catch (err) { return ContentService.createTextOutput('ERROR: ' + err); }
   if (d.accion === 'leerFacilito') { try { return json_(leerFacilito_(d)); } catch (err) { return json_({ error: String(err) }); } }
+  if (d.accion === 'leerPOS') { try { return json_(leerPOS_(d)); } catch (err) { return json_({ error: String(err) }); } }
+  if (d.accion === 'subirTemp') { try { return json_(subirTemp_(d)); } catch (err) { return json_({ error: String(err) }); } }
+  if (d.accion === 'buscarTemp') { try { return json_(buscarTemp_(d)); } catch (err) { return json_({ error: String(err) }); } }
   if (d.accion === 'guardarFoto') { try { return json_(guardarFoto_(d)); } catch (err) { return json_({ error: String(err) }); } }
   try {
     var to = String(d.to || '').trim();
@@ -32,7 +35,7 @@ function doPost(e) {
       ? Utilities.newBlob(Utilities.base64Decode(d.pdf), 'application/pdf', d.filename || 'arqueo.pdf')
       : Utilities.newBlob(html, 'text/html', 'arqueo.html').getAs('application/pdf').setName(d.filename || 'arqueo.pdf');
     var adjuntos = [pdf];
-    if (d.fotoId) { try { adjuntos.push(DriveApp.getFileById(d.fotoId).getBlob()); } catch (err) {} }
+    (d.fotoIds || (d.fotoId ? [d.fotoId] : [])).forEach(function (id) { try { adjuntos.push(DriveApp.getFileById(id).getBlob()); } catch (err) {} });
     MailApp.sendEmail({
       to: to,
       subject: d.subject || 'Arqueo de caja',
@@ -55,20 +58,29 @@ function guardarFoto_(d) {
   return { ok: true, id: f.getId(), url: f.getUrl() };
 }
 
-// Lee el ticket "CIERRE DE CAJA" de Control Facilito con Gemini.
-function leerFacilito_(d) {
+// Fotos tomadas con un celular (código QR): se guardan un momento en Drive y la compu las recoge.
+var CARPETA_TEMP = 'Arqueos GrupoVelasco - Fotos temporales';
+function carpeta_(n) { var it = DriveApp.getFoldersByName(n); return it.hasNext() ? it.next() : DriveApp.createFolder(n); }
+function subirTemp_(d) {
+  if (!/^[a-z0-9]{16,40}$/i.test(String(d.token || ''))) return { error: 'Código no válido' };
+  carpeta_(CARPETA_TEMP).createFile(Utilities.newBlob(Utilities.base64Decode(d.img), 'image/jpeg', d.token + '.jpg'));
+  return { ok: true };
+}
+function buscarTemp_(d) {
+  var it = carpeta_(CARPETA_TEMP).getFilesByName(String(d.token || '') + '.jpg');
+  if (!it.hasNext()) return { ok: true, listo: false };
+  var f = it.next(), b64 = Utilities.base64Encode(f.getBlob().getBytes());
+  f.setTrashed(true);
+  return { ok: true, listo: true, img: b64 };
+}
+
+// Llama a Gemini con una imagen y un pedido; reintenta si está saturado. Devuelve el JSON leído.
+function gemini_(prompt, d) {
   var props = PropertiesService.getScriptProperties();
   var key = props.getProperty('GEMINI_API_KEY');
   if (!key) return { error: 'Falta la clave de Gemini (GEMINI_API_KEY) en las propiedades del script.' };
   var model = props.getProperty('GEMINI_MODEL') || 'gemini-3.8-flash';
-  var prompt = 'La imagen es un ticket impreso "CIERRE DE CAJA" del sistema Control Facilito de un restaurante en Bolivia. ' +
-    'Lee los montos y devuelve SOLO un objeto JSON con estas claves numéricas (número con punto decimal; usa 0 si no aparece; el descuento va negativo si así figura): ' +
-    'ventas_sistema, ingreso_extra, total_venta, apertura, ingreso_efectivo, ingreso_otros, venta_pago_posterior, venta_transferencia, venta_tarjeta, ' +
-    'cobros_efectivo, cobros_no_efectivo, descuento, egresos_efectivo, egresos_otros, pagos_efectivo, pagos_otros, compras_efectivo, compras_otros, ' +
-    'total, parcial_efectivo, declaracion, total_efectivo, diferencia, ventas_anuladas; ' +
-    'y estas de texto: sucursal, caja, fecha_apertura y fecha_cierre (formato AAAA-MM-DD HH:MM).';
   var j;
-  // si Gemini está saturado, reintenta solo (hasta 4 veces)
   for (var intento = 0; intento < 4; intento++) {
     var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key), {
       method: 'post', contentType: 'application/json', muteHttpExceptions: true,
@@ -88,6 +100,24 @@ function leerFacilito_(d) {
   return { ok: true, datos: JSON.parse(t) };
 }
 
+// Lee el voucher "CIERRE DE LOTE" del POS (tarjetas).
+function leerPOS_(d) {
+  return gemini_('La imagen es un voucher impreso "CIERRE DE LOTE" de un POS de tarjetas en Bolivia. ' +
+    'Devuelve SOLO un objeto JSON con: lote (texto), fecha (AAAA-MM-DD), hora (HH:MM), terminal (texto), comercio (texto), ' +
+    'total_ventas_bs y cantidad_ventas_bs (de "TOTALES BOLIVIANOS" → "Total Ventas"), total_general_bs, anulaciones_bs, ' +
+    'total_ventas_usd, y transacciones: lista de {ref, monto} con cada consumo. Números con punto decimal; 0 si no aparece.', d);
+}
+
+// Lee el ticket "CIERRE DE CAJA" de Control Facilito con Gemini.
+function leerFacilito_(d) {
+  var prompt = 'La imagen es un ticket impreso "CIERRE DE CAJA" del sistema Control Facilito de un restaurante en Bolivia. ' +
+    'Lee los montos y devuelve SOLO un objeto JSON con estas claves numéricas (número con punto decimal; usa 0 si no aparece; el descuento va negativo si así figura): ' +
+    'ventas_sistema, ingreso_extra, total_venta, apertura, ingreso_efectivo, ingreso_otros, venta_pago_posterior, venta_transferencia, venta_tarjeta, ' +
+    'cobros_efectivo, cobros_no_efectivo, descuento, egresos_efectivo, egresos_otros, pagos_efectivo, pagos_otros, compras_efectivo, compras_otros, ' +
+    'total, parcial_efectivo, declaracion, total_efectivo, diferencia, ventas_anuladas; ' +
+    'y estas de texto: sucursal, caja, fecha_apertura y fecha_cierre (formato AAAA-MM-DD HH:MM).';
+  return gemini_(prompt, d);
+}
 // Ejecuta esta función UNA vez con el botón "Ejecutar": pide los permisos (correo y Drive)
 // y te manda un correo de prueba a ti mismo.
 function probarCorreoArqueos() {
