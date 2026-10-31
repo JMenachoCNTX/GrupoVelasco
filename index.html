@@ -286,6 +286,7 @@
   body.afullOn{overflow:hidden}
   .scr.vtOn > :not(.vtbar):not(.vtbox){display:none!important}
   body.esCaja #weekStrip, body.esCaja #scrWeek > .exbar, body.esCaja #pendAlert, body.esCaja #arqStrip, body.esCaja #arqTabs, body.esCaja #arqMesPills, body.esCaja #arqHelp, body.esCaja .arqtool{display:none!important}
+  .peyat td{text-align:center} .peyat td:first-child{text-align:left} .peyat .ain.n{width:100px} .peyat tfoot td{text-align:center}
   .rgh3{font-size:15px; margin:18px 0 8px} .rgh3:first-child{margin-top:0}
   .vtbar{margin-bottom:10px} .vtbox:empty{display:none}
   .vttool{display:flex; align-items:center; gap:12px; flex-wrap:wrap} .vtt{display:flex; flex-direction:column; gap:2px; margin-right:auto}
@@ -941,7 +942,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v53';
+var APP_VERSION = 'v54';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -3205,7 +3206,7 @@ async function renderArqueos(){
     h+='</tbody></table></div></div>';
   } else {
     var GRP={peya:'PedidosYa',yango:'YANGO',loc:'Local'}, colGrp={}; GV_COLS.forEach(function(c){ colGrp[c[0]]=c[2]; });
-    var lines=[]; sel.forEach(function(a){ (a.ordenes||[]).forEach(function(o,i){ var k=mkKey(o.m); Object.keys(o.a||{}).forEach(function(c){ var v=num(o.a[c]); if(!v) return; lines.push({a:a,i:i+1,k:k,m:o.m,c:c,v:v,n:o.n||''}); }); }); });
+    var lines=[]; sel.forEach(function(a){ peyaLineas(a).forEach(function(l){ lines.push({a:a,i:'PY'+(l.cnt?' ('+l.cnt+')':''),k:l.k,m:l.m,c:l.col,v:l.v,n:'TOTAL DEL DÍA'}); }); (a.ordenes||[]).forEach(function(o,i){ var k=mkKey(o.m); Object.keys(o.a||{}).forEach(function(c){ var v=num(o.a[c]); if(!v) return; lines.push({a:a,i:i+1,k:k,m:o.m,c:c,v:v,n:o.n||''}); }); }); });
     var vis=lines.filter(function(l){ return (!arqFMarca||l.k===arqFMarca) && (!arqFCanal||colGrp[l.c]===arqFCanal); });
     var tot2=0; vis.forEach(function(l){ tot2+=l.v; });
     document.getElementById('arqStrip').innerHTML = statHTML('Órdenes',vis.length,'g')+statHTML('Total vendido',bs(tot2),'p')+statHTML('Ticket promedio',bs(vis.length?tot2/vis.length:0),'s');
@@ -3214,7 +3215,7 @@ async function renderArqueos(){
     h+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Fecha</th><th>Arqueo</th><th>#</th><th>Marca</th><th>Canal</th><th>Tipo de pago</th><th class="r">Monto</th><th>Comentario</th><th></th></tr></thead><tbody>';
     if(!vis.length) h+='<tr><td colspan="9" class="note" style="text-align:center;padding:18px">No hay órdenes con estos filtros.</td></tr>';
     var colName={}; GV_COLS.forEach(function(c){ colName[c[0]]=c[1]; });
-    vis.forEach(function(l){ h+='<tr><td>'+fmtDate(l.a.fecha)+'</td><td class="mono">'+esc(l.a.nro)+'</td><td class="mono">'+l.i+'</td><td>'+(l.k?'<span class="mkpill" style="background:'+GV_MK[l.k].c+'">'+esc(GV_MK[l.k].n)+'</span>':esc(l.m||'—'))+'</td><td>'+GRP[colGrp[l.c]]+'</td><td>'+colName[l.c]+'</td><td class="mono">'+fmt(l.v)+'</td><td>'+esc(l.n)+'</td><td><button class="mini" onclick="openArq(\''+l.a.id+'\')">'+ARQ_IC.ver+'</button></td></tr>'; });
+    vis.forEach(function(l){ h+='<tr><td>'+fmtDate(l.a.fecha)+'</td><td class="mono">'+esc(l.a.nro)+'</td><td class="mono">'+(l.i==='PY'?'PY'+(l.cnt?' ('+l.cnt+')':''):l.i)+'</td><td>'+(l.k?'<span class="mkpill" style="background:'+GV_MK[l.k].c+'">'+esc(GV_MK[l.k].n)+'</span>':esc(l.m||'—'))+'</td><td>'+GRP[colGrp[l.c]]+'</td><td>'+colName[l.c]+'</td><td class="mono">'+fmt(l.v)+'</td><td>'+esc(l.n)+'</td><td><button class="mini" onclick="openArq(\''+l.a.id+'\')">'+ARQ_IC.ver+'</button></td></tr>'; });
     if(vis.length) h+='<tr class="tot"><td colspan="6">Total</td><td class="mono">'+fmt(tot2)+'</td><td colspan="2"></td></tr>';
     h+='</tbody></table></div></div>';
   }
@@ -3234,10 +3235,22 @@ function arqCols(d){
   return GV_COLS.filter(function(c){
     if(can.indexOf(c[2])<0) return false;
     if(c[0]==='peya_otros') return d.ordenes.some(function(o){ return num((o.a||{}).peya_otros); });
+    // desde v54 PedidosYa se carga como total por marca (llega solo a Control Facilito); la columna solo aparece en arqueos antiguos
+    if(c[2]==='peya') return d.ordenes.some(function(o){ return PEYA_COLS.some(function(pc){ return num((o.a||{})[pc]); }); });
     return true;
   });
 }
 function arqMarcas(d){ return gvSuc(d.suc).marcas; }
+var PEYA_COLS=['peya_efe','peya_onl','peya_vou','peya_promo','peya_otros'];
+var PEYA_CAMPOS=[['n','Cant. órdenes'],['onl','Online'],['efe','Efectivo'],['vou','Voucher'],['promo','Dscto promo']];
+var PEYA_MAP={onl:'peya_onl',efe:'peya_efe',vou:'peya_vou',promo:'peya_promo'};
+function marcasPeya(d){ return gvSuc(d.suc).canales.indexOf('peya')<0 ? [] : arqMarcas(d).filter(function(k){ return GV_MK[k].canales.indexOf('peya')>=0; }); }
+// líneas de PedidosYa (totales por marca) para listas y reportes; la cantidad de órdenes va en la primera línea de cada marca
+function peyaLineas(a){
+  var out=[]; Object.keys(a.peya||{}).forEach(function(k){ if(!GV_MK[k]) return; var x=a.peya[k], first=true;
+    ['onl','efe'].forEach(function(f){ var v=num(x[f]); if(!v) return; out.push({a:a,i:'PY',k:k,m:GV_MK[k].n,col:PEYA_MAP[f],v:v,cnt:first?Math.round(num(x.n)):0}); first=false; }); });
+  return out;
+}
 // ¿la marca vende por ese canal en esa sucursal?
 function colPermitida(d,mk,col){ var g=(GV_COLS.filter(function(c){return c[0]===col;})[0]||[])[2]; if(gvSuc(d.suc).canales.indexOf(g)<0) return false; return !mk || GV_MK[mk].canales.indexOf(g)>=0; }
 var GV_DENOMS=[['d200',200,'Bs 200'],['d100',100,'Bs 100'],['d50',50,'Bs 50'],['d20',20,'Bs 20'],['d10',10,'Bs 10'],['d5',5,'Bs 5'],['d2',2,'Bs 2'],['d1',1,'Bs 1'],['d050',0.5,'Bs 0,50'],['d020',0.2,'Bs 0,20'],['d010',0.1,'Bs 0,10']];
@@ -3287,7 +3300,7 @@ async function newArqueo(){
   if(prev && prev.ordenes && prev.ordenes.some(ordUsada) && confirm('Tienes un arqueo sin guardar (Nro '+(prev.nro||'—')+' · '+gvSucName(prev.suc)+').\n\nAceptar = continuar ese arqueo\nCancelar = empezar uno nuevo')){
     draft=prev; showLoader('Preparando el arqueo…'); draft.nro=await nextNro(draft.suc); hideLoader();
   } else {
-    draft={suc:sucDefault(),fecha:fechaApertura(),nro:'',cajero:'',turnoIni:'',turnoFin:'',cajaChica:'',ventasGerente:'',ordenes:[],gastos:[],conteo:{},comentarios:''};
+    draft={suc:sucDefault(),fecha:fechaApertura(),nro:'',cajero:'',turnoIni:'',turnoFin:'',cajaChica:'',ventasGerente:'',ordenes:[],gastos:[],peya:{},conteo:{},comentarios:''};
     showLoader('Preparando el arqueo…'); await arqAutoDatos(draft,false); hideLoader();
   }
   arqMode='new'; arqRO=false; arqSel=null; padRows(draft);
@@ -3299,6 +3312,7 @@ function docToDraft(a){
   return {suc:a.suc,fecha:a.fecha,nro:a.nro,cajero:a.cajero||'',turnoIni:tt[0]||'',turnoFin:tt[1]||'',cajaChica:caja||'',ventasGerente:a.ventasGerente||'',
     ordenes:(a.ordenes||[]).map(function(o){ return {m:o.m||'',a:Object.assign({},o.a||{}),n:o.n||'',mix:!!o.mx}; }),
     gastos:(a.gastos||[]).map(function(g){ return {g:g.g||'',t:g.t||'',doc:g.doc||'',docnro:g.docnro||'',tipo:g.tipo||''}; }),
+    peya:JSON.parse(JSON.stringify(a.peya||{})),
     conteo:c, comentarios:a.comentarios||'', facDatos:a.facDatos||null, posDatos:a.posDatos||null, _doc:a};
 }
 
@@ -3315,6 +3329,9 @@ function arqCalc(d){
     if(k) for(var g in gs) ped[k][g]=(ped[k][g]||0)+1;
     if(any) nOrd++;
   });
+  Object.keys(d.peya||{}).forEach(function(k){ if(!GV_MK[k]) return; var x=d.peya[k], n=Math.round(num(x.n));
+    for(var f in PEYA_MAP){ var v=num(x[f]); if(!v) continue; t[PEYA_MAP[f]]+=v; var b=by[k][PEYA_MAP[f]]||(by[k][PEYA_MAP[f]]={n:0,v:0}); b.n+=n; b.v+=v; }
+    if(n){ ped[k].peya=(ped[k].peya||0)+n; nOrd+=n; } });
   for(var x in t) t[x]=r2(t[x]);
   var ventasPeya=r2(t.peya_efe+t.peya_onl), ventasLocal=r2(t.loc_efe+t.loc_pos+t.loc_qr), ventasYango=t.yango;
   var ventasExcel=r2(ventasPeya+ventasLocal+ventasYango);
@@ -3424,8 +3441,17 @@ function arqSheetHTML(d){
   h+='</div><div class="akpis" id="aKpis"></div></div>';
   // --- comparación con Control Facilito (se llena con la foto)
   h+='<div class="acard" id="cardFac" style="display:none"><h3>'+ARQ_IC.cam+' Comparación con Control Facilito y el POS<span class="sp"></span>'+colBtn('cardFac')+'</h3><div id="aFacCmp"></div></div>';
+  // --- PedidosYa: total por marca
+  var mp=marcasPeya(d);
+  if(mp.length && (!ro || Object.keys(d.peya||{}).length)){
+    h+='<div class="acard" id="cardPeya"><h3><span class="gchip peya">PedidosYa</span> Totales del día por marca'+(ro?'':'<span class="ahint">Los pedidos de PedidosYa ya entran solos a Control Facilito: aquí solo va la cantidad de órdenes y el total de cada marca (sácalo del reporte de Control Facilito).</span>')+'<span class="sp"></span>'+colBtn('cardPeya')+'</h3>';
+    h+='<div style="overflow-x:auto"><table class="aot peyat"><thead><tr><th>Marca</th>'+PEYA_CAMPOS.map(function(c){return '<th>'+c[1]+'</th>';}).join('')+'<th>Total ventas</th></tr></thead><tbody>';
+    mp.forEach(function(k){ var x=(d.peya||{})[k]||{};
+      h+='<tr><td><span class="mkpill" style="background:'+GV_MK[k].c+'">'+esc(GV_MK[k].n)+'</span></td>'+PEYA_CAMPOS.map(function(c){ return '<td>'+aIn('py',null,c[0],num(x[c[0]])?x[c[0]]:'',{num:1,cls:'n',ph:'0'}).replace('data-f="py"','data-f="py" data-k="'+k+'"')+'</td>'; }).join('')+'<td class="mono r" id="pyT_'+k+'"></td></tr>'; });
+    h+='</tbody><tfoot><tr><td>Total</td>'+PEYA_CAMPOS.map(function(c){return '<td class="n" id="pyS_'+c[0]+'"></td>';}).join('')+'<td class="n" id="pyS_tot"></td></tr></tfoot></table></div></div>';
+  }
   // --- detalle de órdenes
-  h+='<div class="acard" id="cardOrd"><h3>'+ARQ_IC.ord+' Detalle de órdenes'+(ro?'':'<span class="ahint">Una fila = una orden con un solo tipo de pago. Voucher y descuento: toca "+". Pago con dos formas en el local: "Mixto". Enter baja de fila; en Marca: M, S o N.</span>')+'<span class="sp"></span>'+(ro?'':'<button class="mini" onclick="arqMasFilas(\'o\')">+ 10 filas</button>')+'<button class="mini" onclick="arqFull(\'cardOrd\')">'+ARQ_IC.full+' <span>Pantalla completa</span></button>'+colBtn('cardOrd')+'</h3>';
+  h+='<div class="acard" id="cardOrd"><h3>'+ARQ_IC.ord+' Detalle de órdenes'+(ro?'':'<span class="ahint">Solo YANGO y Local, una fila por orden con un solo tipo de pago. Pago con dos formas en el local: "Mixto". Enter baja de fila; en Marca: M, S o N.</span>')+'<span class="sp"></span>'+(ro?'':'<button class="mini" onclick="arqMasFilas(\'o\')">+ 10 filas</button>')+'<button class="mini" onclick="arqFull(\'cardOrd\')">'+ARQ_IC.full+' <span>Pantalla completa</span></button>'+colBtn('cardOrd')+'</h3>';
   var cols=arqCols(d), grps=[];
   cols.forEach(function(c){ var l=grps[grps.length-1]; if(l&&l.k===c[2]) l.n++; else grps.push({k:c[2],n:1}); });
   h+='<div class="aobox"><table class="aot"><thead><tr class="grp"><th></th><th></th>'+grps.map(function(g){ return '<th colspan="'+g.n+'" class="gblk gs '+g.k+'"><span class="gchip '+g.k+'">'+GV_GRP[g.k]+'</span></th>'; }).join('')+'<th></th></tr><tr><th>#</th><th>Marca</th>';
@@ -3515,6 +3541,11 @@ function arqRender(){
   GV_DENOMS.forEach(function(dn){ var e=document.getElementById('cs_'+dn[0]); if(e){ var q=num((d.conteo||{})[dn[0]]); e.textContent=q?fmt(q*dn[1]):''; } });
   document.getElementById('aCnt').innerHTML=kvRow('Total dinero en sobre',fmt(c.sobre),'strong')+'<div class="kv"><span>Resultado del arqueo</span>'+estBadge(c.estado,c.dif)+'</div>';
   document.getElementById('aEgrTot').textContent=bs(c.totalGastos);
+  // totales del bloque PedidosYa
+  if(document.getElementById('pyS_tot')){ var S={n:0,onl:0,efe:0,vou:0,promo:0,tot:0};
+    marcasPeya(d).forEach(function(k){ var x=(d.peya||{})[k]||{}, tv=num(x.onl)+num(x.efe); PEYA_CAMPOS.forEach(function(cc){ S[cc[0]]+=num(x[cc[0]]); }); S.tot+=tv; var e=document.getElementById('pyT_'+k); if(e) e.textContent=tv?fmt(tv):''; });
+    PEYA_CAMPOS.forEach(function(cc){ var e=document.getElementById('pyS_'+cc[0]); if(e) e.textContent=S[cc[0]]?(cc[0]==='n'?Math.round(S.n):fmt(S[cc[0]])):''; });
+    document.getElementById('pyS_tot').textContent=S.tot?fmt(S.tot):''; }
   arqCharts(c,d);
 }
 function arqSched(){ if(!arqRaf) arqRaf=requestAnimationFrame(arqRender); }
@@ -3569,6 +3600,7 @@ function arqOnInput(e){
     arqCrecer();
   } else if(f==='om'){ draft.ordenes[r].m=v; arqPintarMarca(r); }
   else if(f==='on'){ draft.ordenes[r].n=v; arqCrecer(); }
+  else if(f==='py'){ var pk=el.getAttribute('data-k'); draft.peya=draft.peya||{}; var px=draft.peya[pk]=draft.peya[pk]||{}; if(num(v)) px[c]=v; else delete px[c]; }
   else if(f==='g'){ draft.gastos[r][c]=v; arqCrecerG();
     if(c==='tipo'){ var pp=String(v).toUpperCase()===TIPO_PAGO_PERSONAL, gi=document.querySelector('#asheet [data-f="g"][data-r="'+r+'"][data-c="g"]'); if(gi){ if(pp){ gi.setAttribute('list','gvEmpList'); gi.placeholder='Elige a la persona'; } else { gi.removeAttribute('list'); gi.placeholder='Descripción del gasto'; } } } }
   else if(f==='cn'){ draft.conteo=draft.conteo||{}; if(num(v)) draft.conteo[c]=num(v); else delete draft.conteo[c]; }
@@ -3969,7 +4001,12 @@ async function saveArqueo(btn){
     var falta=[]; if(!String(gg.g||'').trim()) falta.push('descripción'); if(!(num(gg.t)>0)) falta.push('monto'); if(!gg.doc) falta.push('factura o recibo'); if(!String(gg.docnro||'').trim()) falta.push('nro de documento'); if(!String(gg.tipo||'').trim()) falta.push('tipo de gasto');
     if(falta.length){ toast('Gasto #'+(gi+1)+': falta '+falta.join(', ')); var cg=document.getElementById('cardEgr'); if(cg){ cg.classList.remove('acol'); var gr=cg.querySelector('tr[data-grow="'+gi+'"]'); if(gr) gr.scrollIntoView({block:'center',behavior:'smooth'}); } return; }
   }
-  if(!draft.ordenes.some(function(o){ return Object.keys(o.a||{}).some(function(k){return num(o.a[k]);}); })){ toast('Agrega al menos una orden con importe'); return; }
+  var hayPeya=Object.keys(draft.peya||{}).some(function(k){ var x=draft.peya[k]; return num(x.onl)||num(x.efe); });
+  if(!hayPeya && !draft.ordenes.some(function(o){ return Object.keys(o.a||{}).some(function(k){return num(o.a[k]);}); })){ toast('Agrega al menos una orden con importe (o los totales de PedidosYa)'); return; }
+  // PedidosYa: si hay importe tiene que haber cantidad de órdenes, y al revés
+  for(var pk2 in (draft.peya||{})){ var px2=draft.peya[pk2], imp=num(px2.onl)+num(px2.efe);
+    if(imp && !(num(px2.n)>0)){ toast('PedidosYa '+GV_MK[pk2].n+': falta la cantidad de órdenes'); return; }
+    if(num(px2.n)>0 && !imp){ toast('PedidosYa '+GV_MK[pk2].n+': falta el importe (online o efectivo)'); return; } }
   // Nro automático: se vuelve a leer de la nube al guardar (por si otra caja guardó antes) = último + 1
   delete gvCache[draft.suc];
   var nro=await nextNro(draft.suc);
@@ -3986,6 +4023,7 @@ async function saveArqueo(btn){
     totalGastos:c.totalGastos, saldo:q.saldo, sobre:q.sobre, difArqueo:q.dif, conteo:conteoObj,
     comentarios:draft.comentarios||'', mes:(MONTHS[parseInt(draft.fecha.slice(5,7),10)-1]||'').toLowerCase(),
     ordenes:draft.ordenes.filter(ordUsada).map(function(o){ var a={}; for(var k in (o.a||{})){ if(num(o.a[k])) a[k]=num(o.a[k]); } var r={m:o.m,a:a}; if(o.n) r.n=o.n; if(o.mix) r.mx=1; return r; }),
+    peya:(function(){ var o={}; Object.keys(draft.peya||{}).forEach(function(k){ var x=draft.peya[k], y={}; ['n','onl','efe','vou','promo'].forEach(function(f){ if(num(x[f])) y[f]=num(x[f]); }); if(Object.keys(y).length) o[k]=y; }); return o; })(),
     gastos:draft.gastos.filter(function(g){return String(g.g||'').trim()||num(g.t)>0;}).map(function(g){ return {g:g.g,t:num(g.t),tipo:g.tipo||'',doc:g.doc||'',docnro:g.docnro||''}; }),
     facDatos:draft.facDatos||null, facFoto:(draft._facFotoRef||null), posDatos:draft.posDatos||null, posFoto:(draft._posFotoRef||null),
     formato:2, estado:'capturado', creadoEn:Date.now(), creadoPor:(session?session.email:''), hechoPor:operadorNombre() };
@@ -4146,6 +4184,7 @@ async function vtDatos(r){
   arqs.forEach(function(a){
     (a.gastos||[]).forEach(function(g){ gas.push({a:a,g:g}); });
     (a.ordenes||[]).forEach(function(o,i){ var k=mkKey(o.m); PAYCOLS.forEach(function(col){ var v=num((o.a||{})[col]); if(v) ord.push({a:a,i:i+1,k:k,m:o.m,col:col,v:v}); }); });
+    peyaLineas(a).forEach(function(l){ ord.push(l); });
   });
   return {arqs:arqs,gas:gas,ord:ord};
 }
@@ -4170,8 +4209,8 @@ function vtLista(kind,D){
     rows.push(['Fecha','Sucursal','Arqueo','#','Marca','Canal','Tipo de pago','Monto']);
     h='<table class="tbl"><thead><tr><th>Fecha</th><th>Sucursal</th><th>Arqueo</th><th>#</th><th>Marca</th><th>Canal</th><th>Tipo de pago</th><th class="r">Monto</th></tr></thead><tbody>';
     D.ord.forEach(function(l){ var g=colGrp(l.col);
-      rows.push([fullDate(l.a.fecha),gvSucName(l.a.suc),l.a.nro,l.i,l.k?GV_MK[l.k].n:l.m,GV_GRP[g],VT_COLN[l.col],r2(l.v)]);
-      h+='<tr><td>'+fmtDate(l.a.fecha)+'</td><td>'+esc(gvSucName(l.a.suc))+'</td><td class="mono">'+esc(l.a.nro)+'</td><td class="mono">'+l.i+'</td><td>'+(l.k?'<span class="mkpill" style="background:'+GV_MK[l.k].c+'">'+esc(GV_MK[l.k].n)+'</span>':esc(l.m||'—'))+'</td><td>'+GV_GRP[g]+'</td><td>'+VT_COLN[l.col]+'</td><td class="mono">'+fmt(l.v)+'</td></tr>'; });
+      rows.push([fullDate(l.a.fecha),gvSucName(l.a.suc),l.a.nro,l.i==='PY'?'PEDIDOSYA TOTAL ('+(l.cnt||0)+' órdenes)':l.i,l.k?GV_MK[l.k].n:l.m,GV_GRP[g],VT_COLN[l.col],r2(l.v)]);
+      h+='<tr><td>'+fmtDate(l.a.fecha)+'</td><td>'+esc(gvSucName(l.a.suc))+'</td><td class="mono">'+esc(l.a.nro)+'</td><td class="mono">'+(l.i==='PY'?'PY'+(l.cnt?' ('+l.cnt+')':''):l.i)+'</td><td>'+(l.k?'<span class="mkpill" style="background:'+GV_MK[l.k].c+'">'+esc(GV_MK[l.k].n)+'</span>':esc(l.m||'—'))+'</td><td>'+GV_GRP[g]+'</td><td>'+VT_COLN[l.col]+'</td><td class="mono">'+fmt(l.v)+'</td></tr>'; });
   }
   if(rows.length===1) h+='<tr><td colspan="9" class="note" style="text-align:center;padding:16px">No hay datos en este periodo.</td></tr>';
   return {html:'<div style="overflow-x:auto">'+h+'</tbody></table></div>', rows:rows};
@@ -4180,7 +4219,7 @@ function vtKpis(kind,D){
   if(kind==='arq'){ var v=0,g=0,dsum=0,nc=0; D.arqs.forEach(function(a){ v+=num(a.ventasExcel); g+=num(a.totalGastos); dsum+=num(a.difArqueo); if(arqEstado(num(a.difArqueo))==='CUADRADO') nc++; });
     return statHTML('Arqueos',D.arqs.length,'g')+statHTML('Ventas',bs(v),'p')+statHTML('Gastos',bs(g),'s')+statHTML('Cuadrados',nc+' de '+D.arqs.length,'g')+statHTML('Diferencias',bs(dsum),'s'); }
   if(kind==='gas'){ var t=0; D.gas.forEach(function(x){ t+=num(x.g.t); }); return statHTML('Gastos',D.gas.length,'g')+statHTML('Total gastado',bs(t),'p')+statHTML('Promedio por gasto',bs(D.gas.length?t/D.gas.length:0),'s'); }
-  var tt=0, n={}; D.ord.forEach(function(l){ tt+=l.v; n[l.a.id+'_'+l.i]=1; }); var no=Object.keys(n).length;
+  var tt=0, n={}, npy=0; D.ord.forEach(function(l){ tt+=l.v; if(l.i==='PY') npy+=l.cnt||0; else n[l.a.id+'_'+l.i]=1; }); var no=Object.keys(n).length+npy;
   return statHTML('Órdenes',no,'g')+statHTML('Total vendido',bs(tt),'p')+statHTML('Ticket promedio',bs(no?tt/no:0),'s');
 }
 function vtSum(list,keyFn,valFn){ var m={}; list.forEach(function(x){ var k=keyFn(x); m[k]=(m[k]||0)+valFn(x); }); return m; }
@@ -4224,7 +4263,7 @@ function vtResumen(kind,D){
     h+='<tr class="tot"><td>Total</td>'+sucs.map(function(s){return '<td class="mono">'+fmt(TT[s]||0)+'</td>';}).join('')+'<td class="mono">'+fmt(tg)+'</td></tr>';
   } else {
     var cols=PAYCOLS.filter(function(c){ return D.ord.some(function(l){ return l.col===c; }); });
-    var mk={}; D.ord.forEach(function(l){ var k=l.k?GV_MK[l.k].n:'SIN MARCA'; var x=mk[k]=mk[k]||{}; x[l.col]=(x[l.col]||0)+l.v; x._n=(x._n||0)+1; });
+    var mk={}; D.ord.forEach(function(l){ var k=l.k?GV_MK[l.k].n:'SIN MARCA'; var x=mk[k]=mk[k]||{}; x[l.col]=(x[l.col]||0)+l.v; x._n=(x._n||0)+(l.i==='PY'?(l.cnt||0):1); });
     var nom=function(c){ return GV_GRP[colGrp(c)]+' '+VT_COLN[c]; };
     rows.push(['Marca'].concat(cols.map(nom)).concat(['Total','Órdenes']));
     h='<table class="tbl"><thead><tr><th>Marca</th>'+cols.map(function(c){return '<th class="r">'+nom(c)+'</th>';}).join('')+'<th class="r">Total</th><th class="r">Órdenes</th></tr></thead><tbody>';
@@ -4374,10 +4413,10 @@ function rgContenido(D,r){
   h+='<tr class="tot"><td>Total</td><td class="mono">'+fmt(tg)+'</td></tr></tbody></table>';
   sheets['Gastos']=rows;
   // 4. órdenes por marca
-  var om={}; D.ord.forEach(function(l){ var k=l.k?GV_MK[l.k].n:'SIN MARCA'; var x=om[k]=om[k]||{n:{},v:0}; x.v+=l.v; x.n[l.a.id+'_'+l.i]=1; });
+  var om={}; D.ord.forEach(function(l){ var k=l.k?GV_MK[l.k].n:'SIN MARCA'; var x=om[k]=om[k]||{n:{},v:0,py:0}; x.v+=l.v; if(l.i==='PY') x.py+=l.cnt||0; else x.n[l.a.id+'_'+l.i]=1; });
   rows=[['Marca','Órdenes','Ventas','Ticket promedio']];
   h+='<h3 class="rgh3">4. Órdenes por marca</h3><table class="tbl"><thead><tr><th>Marca</th><th class="r">Órdenes</th><th class="r">Ventas</th><th class="r">Ticket promedio</th></tr></thead><tbody>';
-  Object.keys(om).forEach(function(k){ var n=Object.keys(om[k].n).length; rows.push([k,n,r2(om[k].v),r2(n?om[k].v/n:0)]); h+='<tr><td>'+esc(k)+'</td><td class="mono">'+n+'</td><td class="mono">'+fmt(om[k].v)+'</td><td class="mono">'+fmt(n?om[k].v/n:0)+'</td></tr>'; });
+  Object.keys(om).forEach(function(k){ var n=Object.keys(om[k].n).length+om[k].py; rows.push([k,n,r2(om[k].v),r2(n?om[k].v/n:0)]); h+='<tr><td>'+esc(k)+'</td><td class="mono">'+n+'</td><td class="mono">'+fmt(om[k].v)+'</td><td class="mono">'+fmt(n?om[k].v/n:0)+'</td></tr>'; });
   if(rows.length===1) h+='<tr><td colspan="4" class="note">Sin órdenes.</td></tr>';
   h+='</tbody></table>';
   sheets['Órdenes']=rows;
