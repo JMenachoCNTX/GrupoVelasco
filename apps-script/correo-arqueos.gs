@@ -60,21 +60,28 @@ function leerFacilito_(d) {
   var props = PropertiesService.getScriptProperties();
   var key = props.getProperty('GEMINI_API_KEY');
   if (!key) return { error: 'Falta la clave de Gemini (GEMINI_API_KEY) en las propiedades del script.' };
-  var model = props.getProperty('GEMINI_MODEL') || 'gemini-2.5-flash';
+  var model = props.getProperty('GEMINI_MODEL') || 'gemini-3.8-flash';
   var prompt = 'La imagen es un ticket impreso "CIERRE DE CAJA" del sistema Control Facilito de un restaurante en Bolivia. ' +
     'Lee los montos y devuelve SOLO un objeto JSON con estas claves numéricas (número con punto decimal; usa 0 si no aparece; el descuento va negativo si así figura): ' +
     'ventas_sistema, ingreso_extra, total_venta, apertura, ingreso_efectivo, ingreso_otros, venta_pago_posterior, venta_transferencia, venta_tarjeta, ' +
     'cobros_efectivo, cobros_no_efectivo, descuento, egresos_efectivo, egresos_otros, pagos_efectivo, pagos_otros, compras_efectivo, compras_otros, ' +
     'total, parcial_efectivo, declaracion, total_efectivo, diferencia, ventas_anuladas; ' +
     'y estas de texto: sucursal, caja, fecha_apertura y fecha_cierre (formato AAAA-MM-DD HH:MM).';
-  var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key), {
-    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-    payload: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: d.mime || 'image/jpeg', data: d.img } }] }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0 }
-    })
-  });
-  var j = JSON.parse(res.getContentText());
+  var j;
+  // si Gemini está saturado, reintenta solo (hasta 4 veces)
+  for (var intento = 0; intento < 4; intento++) {
+    var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key), {
+      method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+      payload: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: d.mime || 'image/jpeg', data: d.img } }] }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0 }
+      })
+    });
+    j = JSON.parse(res.getContentText());
+    var code = res.getResponseCode();
+    if (!j.error || !(code === 429 || code === 503 || /demand|overloaded|unavailable/i.test(j.error.message))) break;
+    Utilities.sleep(3000 * (intento + 1));
+  }
   if (j.error) return { error: 'Gemini: ' + j.error.message };
   var t = j.candidates && j.candidates[0] && j.candidates[0].content.parts[0].text;
   if (!t) return { error: 'Gemini no devolvió datos. Prueba con una foto más clara.' };
