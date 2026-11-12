@@ -75,27 +75,23 @@
   .homeHero .homefoot{position:absolute; left:0; right:0; bottom:12px; z-index:2}
   .homefoot{text-align:center; color:var(--muted); font-size:12px; margin:22px 0 4px; letter-spacing:.3px}
   .homefoot span{opacity:.75}
-  /* etiquetas por rubro (en relieve) */
-  .rubros{margin-top:26px}
-  .rlabel{font-family:"Akshar","Century Gothic",sans-serif; font-size:13px; font-weight:600; color:var(--muted); letter-spacing:.3px}
-  .rchips{display:flex; flex-wrap:wrap; gap:9px; margin-top:11px}
-  .rubro{font-family:"Akshar","Century Gothic",sans-serif; font-weight:600; font-size:14px; color:var(--accent2);
-    background:linear-gradient(180deg,#ffffff,var(--chip)); border:1px solid var(--line); border-radius:999px;
-    padding:8px 16px; box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 6px 14px rgba(5,31,32,.10),-3px 4px 0 rgba(35,83,71,.07)}
-  :root[data-theme="dark"] .rubro{background:linear-gradient(180deg,#163832,#0b2b26); color:var(--ink);
-    box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 8px 18px rgba(0,0,0,.4),-3px 4px 0 rgba(0,0,0,.35)}
-  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .rubro{background:linear-gradient(180deg,#163832,#0b2b26); color:var(--ink); box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 8px 18px rgba(0,0,0,.4),-3px 4px 0 rgba(0,0,0,.35)} }
+  /* Inicio: resumen rápido y atajos */
+  .hq{margin-top:26px; display:flex; flex-direction:column; gap:14px; max-width:620px}
+  .hqcards{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px}
+  .hqc{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; cursor:pointer; text-align:left; font:inherit; color:inherit; display:flex; flex-direction:column; justify-content:flex-start}
+  .hqc.wide{grid-column:1/-1}
+  .hqc:hover{border-color:var(--accent)}
+  .hqc .k{font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--muted)}
+  .hqc .v{font-family:"Akshar","Century Gothic",sans-serif; font-size:22px; font-weight:700; color:var(--ink); margin-top:3px; line-height:1.15}
+  .hqc .s{font-size:12px; color:var(--muted); margin-top:2px}
+  .hqarq{display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:13px; padding:6px 0}
+  .hqarq + .hqarq{border-top:1px solid var(--line)}
+  .hqacts{display:flex; flex-wrap:wrap; gap:8px}
   /* La N en relieve (decorativa) */
   .relN{position:absolute; right:5%; top:7%; width:118px; height:auto; z-index:0; opacity:.92;
     filter:drop-shadow(-7px 9px 0 rgba(11,43,38,.16)) drop-shadow(-13px 17px 13px rgba(5,31,32,.2))}
   .relN path{fill:#235347}
-  /* Cifra en relieve (tarjeta flotante con el monto) */
-  .relCifra{position:absolute; left:38px; bottom:42px; z-index:3; background:linear-gradient(165deg,#1b443b,#0b2b26);
-    color:#fff; border-radius:18px; padding:15px 20px; min-width:208px;
-    box-shadow:0 1px 0 rgba(255,255,255,.08) inset,-6px 10px 0 rgba(5,31,32,.2),0 20px 44px rgba(5,31,32,.32)}
-  .relCifra .rc-k{font-family:"Akshar","Century Gothic",sans-serif; font-size:11.5px; font-weight:600; letter-spacing:2px; color:#8eb69b}
-  .relCifra .rc-v{font-family:"Akshar","Century Gothic",sans-serif; font-weight:700; font-size:36px; line-height:1.15; color:#fff; margin-top:2px; text-shadow:-2px 3px 0 rgba(0,0,0,.22)}
-  @media(max-width:820px){ .relN{width:76px} .relCifra{left:16px; bottom:16px; padding:11px 15px; min-width:0} .relCifra .rc-v{font-size:27px} }
+  @media(max-width:820px){ .relN{width:76px} }
   @media(max-width:820px){
     .homeHero{min-height:0}
     .hhGrid{grid-template-columns:1fr; min-height:0}
@@ -194,6 +190,7 @@
   .staffitem.warn{border-color:var(--amber)}
   .staffitem .nmfields{display:flex; gap:7px; flex:1; min-width:150px}
   .staffitem .nmfields .fld{flex:1; min-width:0}
+  #scrStaff .staffitem .fld{font-size:13px; padding:8px 10px}
   .staffitem .nmctrl{display:flex; gap:7px; align-items:center; flex-wrap:wrap}
   .fld.needap{border-color:var(--amber); background:var(--warnbg)}
   .setpills{display:flex; gap:7px; overflow-x:auto; padding:2px 0 12px; -webkit-overflow-scrolling:touch}
@@ -395,10 +392,10 @@
   .empcard{background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
     box-shadow:var(--shadow); margin-bottom:11px; overflow:hidden}
   .emphead{display:flex; align-items:center; gap:11px; padding:13px 14px; cursor:pointer}
-  .emphead .nm{font-weight:700; font-size:15px}
+  .emphead .nm{font-weight:700; font-size:13.5px}
   .emphead .meta{font-size:12px; color:var(--muted)}
   .emphead .right{margin-left:auto; text-align:right}
-  .emphead .saldo{font-weight:700; font-size:15px}
+  .emphead .saldo{font-weight:700; font-size:14px}
   .badge{display:inline-block; padding:3px 9px; border-radius:20px; font-size:10.5px;
     font-weight:700; letter-spacing:.3px; margin-top:3px}
   .b-pag{background:#e2f1ea;color:var(--accent2)}
@@ -655,19 +652,11 @@
             <h1 class="hhTitle" id="homeGreet">Hola.</h1>
             <div class="hhSlogan">Sistemas a la medida de tu empresa.</div>
             <div class="hhMeta" id="homeMeta"></div>
-            <div class="rubros">
-              <div class="rchips">
-                <span class="rubro">Restaurantes</span>
-                <span class="rubro">Lavaderos</span>
-                <span class="rubro">Flotas y delivery</span>
-                <span class="rubro">Fintech</span>
-              </div>
-            </div>
+            <div class="hq" id="homeQuick"></div>
           </div>
           <div class="hhR">
             <svg class="relN" viewBox="0 0 546 728" aria-hidden="true"><path d="M0 427 L0 728 L136 728 L136 634 Z M410 0 L410 85 L546 292 L546 0 Z M0 0 L148 0 L410 458.5 L410 341 L546 548 L546 728 L401.71 728 L136 263 L136 379 L0 172 Z"/></svg>
             <img class="hhStatue" src="assets/nummeros/clasicos/euclides-lentes.jpg?v=44" alt="" loading="lazy">
-            <div class="relCifra" id="homeCifra"></div>
           </div>
         </div>
         <div class="homefoot">NUMMEROS <span>by</span> CONTAX · GrupoVelasco SRL · Versión <span id="homeVer">—</span></div>
@@ -942,7 +931,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v56';
+var APP_VERSION = 'v57';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -3092,8 +3081,35 @@ function renderHome(){
     try{ if(curMonday){ var sun=addDays(curMonday,6); rango=curMonday.getDate()+' '+mes[curMonday.getMonth()].slice(0,3)+' – '+sun.getDate()+' '+mes[sun.getMonth()].slice(0,3); } }catch(e){}
     m.innerHTML='Cliente: <b>GrupoVelasco SRL</b> · Control y verificación por CONTAX.<br>'+fecha+(rango?(' · Semana en curso: <b>'+rango+'</b>'):'');
   }
-  var ce=document.getElementById('homeCifra');
-  if(ce){ var wh=weekHours(); ce.innerHTML='<div class="rc-k">HORAS DE LA SEMANA</div><div class="rc-v">'+(wh>0?cuad(trim(wh)+' h'):'— h')+'</div>'; }
+  renderHomeQuick();
+}
+/* Inicio: lo de esta semana, los últimos arqueos y atajos a lo que más se usa */
+function renderHomeQuick(){
+  var q=document.getElementById('homeQuick'); if(!q || !session) return;
+  var wk=weekKey(curMonday), g=0,p=0,s=0,pend=0;
+  try{ shownBranches().forEach(function(bid){ activeEmps(bid).forEach(function(id){ var c=calc(getEntry(wk,id,false),bid); g+=c.ganado;p+=c.pagado;s+=c.saldo; if(c.saldo>0.009) pend++; }); }); }catch(e){}
+  var wh=weekHours();
+  var h='<div class="hqcards">'
+    +'<button class="hqc" onclick="showTab(\'Week\')"><div class="k">Horas de la semana</div><div class="v">'+(wh>0?trim(wh)+' h':'— h')+'</div><div class="s">Ganado '+bs(g)+'</div></button>'
+    +'<button class="hqc" onclick="showTab(\'Week\')"><div class="k">Por pagar esta semana</div><div class="v">'+bs(s)+'</div><div class="s">'+(pend?pend+' persona'+(pend>1?'s':'')+' con saldo':'Todo pagado')+'</div></button>'
+    +(puedeArqueos()?'<button class="hqc wide" onclick="showTab(\'Arq\')"><div class="k">Últimos arqueos</div><div id="hqArq"><div class="s">Cargando…</div></div></button>':'')
+    +'</div><div class="hqacts">'
+    +(puedeCrearArqueo()?'<button class="mini acc" onclick="showTab(\'Arq\');newArqueo()">+ Nuevo arqueo</button>':'')
+    +'<button class="mini" onclick="showTab(\'Week\')">'+(canEdit()?'Cargar horas y pagos':'Ver la semana')+'</button>'
+    +'<button class="mini" onclick="showTab(\'Cal\')">Calendario</button>'
+    +'<button class="mini" onclick="showTab(\'Month\')">Resumen del mes</button>'
+    +'</div>';
+  q.innerHTML=h;
+  if(!puedeArqueos()) return;
+  var sucs=sucDeCaja()?[sucDeCaja()]:vtSucs().filter(function(x){ return x!=='cine'; });
+  Promise.all(sucs.map(function(id){ return loadArqSuc(id).then(function(arr){ return {id:id,arr:arr}; }).catch(function(){ return {id:id,arr:[]}; }); })).then(function(rs){
+    var box=document.getElementById('hqArq'); if(!box) return;
+    var out=rs.map(function(r){ var a=r.arr.slice().sort(function(x,y){ return x.fecha<y.fecha?1:(x.fecha>y.fecha?-1:(parseInt(y.nro)||0)-(parseInt(x.nro)||0)); })[0];
+      if(!a) return '';
+      var est=arqEstado(num(a.difArqueo));
+      return '<div class="hqarq"><span><b>'+esc(gvSucName(r.id))+'</b><br><span class="s">Nº '+esc(a.nro)+' · '+fmtDate(a.fecha)+'</span></span>'+estBadge(est,num(a.difArqueo))+'</div>'; }).join('');
+    box.innerHTML=out||'<div class="s">Aún no hay arqueos.</div>';
+  });
 }
 /* Total de horas registradas en la semana en curso (sucursales visibles). */
 function weekHours(){
@@ -3479,7 +3495,8 @@ function arqSheetHTML(d){
   h+='<div class="acard" id="cardDat"><h3>Datos del arqueo<span class="sp"></span>'+colBtn('cardDat')+'</h3><div id="aDat"></div></div>';
   h+='<div class="acard" id="cardCnt"><h3>Conteo del dinero<span class="sp"></span>'+colBtn('cardCnt')+'</h3><div class="cnlist">';
   GV_DENOMS.forEach(function(dn){ var q=(d.conteo||{})[dn[0]]; h+='<div class="cnrow"><span class="cnl">'+dn[2]+'<small>'+(dn[1]>=10?'billete':'moneda')+'</small></span>'+aIn('cn',null,dn[0],q||'',{num:1,cls:'n',ph:'0'})+'<span class="cns mono" id="cs_'+dn[0]+'"></span></div>'; });
-  h+='</div><div id="aCnt"></div><label class="alab">Comentarios del día</label><textarea class="fld ain acom" data-f="d" data-c="comentarios" rows="3"'+(ro?' readonly':'')+' placeholder="Observaciones del turno…">'+esc(d.comentarios||'')+'</textarea></div>';
+  h+='</div>'+(ro&&!conteoTotal(d.conteo)?'<div class="note" style="margin-top:6px">Este arqueo no tiene el detalle de billetes y monedas (viene del sistema anterior, que solo guardaba el total del sobre).</div>':'');
+  h+='<div id="aCnt"></div><label class="alab">Comentarios del día</label><textarea class="fld ain acom" data-f="d" data-c="comentarios" rows="3"'+(ro?' readonly':'')+' placeholder="Observaciones del turno…">'+esc(d.comentarios||'')+'</textarea></div>';
   h+='</div>';
   // --- gráficos (estilo Tablero)
   h+='<div class="acard" id="cardGraf"><h3>'+ARQ_IC.ord.replace('M8 6h12M8 12h12M8 18h12','M5 20V12M10 20V6M15 20v-9M20 20V9')+' Gráficos del arqueo<span class="sp"></span>'+colBtn('cardGraf')+'</h3><div class="chartgrid" id="aCharts"></div></div>';
@@ -3947,7 +3964,7 @@ async function arqPdfDoc(a){
     +'<div style="font-size:12.5px;color:#7b8aa0;margin-top:3px">'+esc(gvSucName(a.suc))+' · '+fullDate(a.fecha)+' · Cajero: '+esc(a.cajero||'—')+' · Turno: '+esc(a.turno||'—')+' · Resultado: <b style="color:'+(c.estado==='CUADRADO'?'#1d6b40':'#b42318')+'">'+c.estado+(c.estado!=='CUADRADO'?' Bs '+fmt(Math.abs(c.dif)):'')+'</b></div></div>'
     +'<span style="flex:1"></span><div class="alogos">'+arqMarcas(d).map(function(k){return '<img src="'+GV_MK[k].logo+'">';}).join('')+'</div></div>';
   var pie=function(n){ return '<div style="margin-top:16px;border-top:1px solid #e3ddce;padding-top:7px;font-size:11px;color:#7b8aa0;display:flex;justify-content:space-between"><span><b style="color:#235347">NUMMEROS</b> by CONTAX · Sistemas a la medida de tu empresa.</span><span>Hoja '+n+' de 2</span></div>'; };
-  var cnt='<div class="cnlist">'+GV_DENOMS.map(function(dn){ var q=num((d.conteo||{})[dn[0]]); return q?kvRow(dn[2]+' × '+q,fmt(q*dn[1])):''; }).join('')+'</div>'+kvRow('Total dinero en sobre',fmt(c.sobre),'strong')+'<div class="kv"><span>Resultado del arqueo</span>'+estBadge(c.estado,c.dif)+'</div>'+(a.comentarios?'<div class="alab">Comentarios del día</div><div style="font-size:12.5px">'+esc(a.comentarios)+'</div>':'');
+  var cnt='<div class="cnlist">'+GV_DENOMS.map(function(dn){ var q=num((d.conteo||{})[dn[0]]); return q?kvRow(dn[2]+' × '+q,fmt(q*dn[1])):''; }).join('')+'</div>'(conteoTotal(d.conteo)?'':'<div class="note" style="font-size:11.5px">Sin detalle de billetes (arqueo del sistema anterior).</div>')+kvRow('Total dinero en sobre',fmt(c.sobre),'strong')+'<div class="kv"><span>Resultado del arqueo</span>'+estBadge(c.estado,c.dif)+'</div>'+(a.comentarios?'<div class="alab">Comentarios del día</div><div style="font-size:12.5px">'+esc(a.comentarios)+'</div>':'');
   var box=document.createElement('div');
   box.id='pdfBox'; box.style.cssText='position:fixed;left:-12000px;top:0;width:1400px;background:#fff;color:#122036';
   box.innerHTML='<style>#pdfBox *{animation:none!important;transition:none!important}</style><div id="pdfP1" class="arqv" style="padding:26px;background:#fff">'+head+'<div class="a3" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div class="acard"><h3>Reporte de ventas</h3>'+arqRepHTML(c,d)+'</div><div class="acard"><h3>Datos del arqueo</h3>'+arqDatHTML(c,d)+'</div><div class="acard"><h3>Conteo del dinero</h3>'+cnt+'</div></div>'+pie(1)+'</div>'
