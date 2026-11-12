@@ -77,6 +77,9 @@
   .homefoot{text-align:center; color:var(--muted); font-size:12px; margin:22px 0 4px; letter-spacing:.3px}
   .homefoot span{opacity:.75}
   /* Inicio: resumen rápido y atajos */
+  .rencab{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:6px 26px; margin-top:12px}
+  .rencab2{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:0 22px}
+  .renlab{display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted); margin-bottom:8px}
   .hq{margin-top:26px; display:flex; flex-direction:column; gap:14px; max-width:620px}
   .hqcards{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px}
   .hqc{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; cursor:pointer; text-align:left; font:inherit; color:inherit; display:flex; flex-direction:column; justify-content:flex-start}
@@ -932,7 +935,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v61';
+var APP_VERSION = 'v62';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -3172,7 +3175,7 @@ function setArqTab(t){ arqTab=t; arqSel=null; if(t==='ren') renVista='lista'; re
    Juntan los sobres de varios cierres: se marca cuáles llegaron, cuánto traía cada uno y se cuentan los billetes.
    Cada rendición se guarda en gvArqueos con suc '_rend' (id 'rend_NN'); cada arqueo rendido queda con a.rend={id,nro,fecha}.
    El dinero hoy se usa para pagar al personal (destino); se compara con los pagos de esa semana que no salieron de la caja. */
-var REN_SUC='_rend', REN_DESDE='2026-01-01', REN_DESTINOS=['PAGO AL PERSONAL','DEPÓSITO AL BANCO','OTRO'];
+var REN_SUC='_rend', REN_DESDE='2026-01-01', REN_DESTINOS=['','PAGO AL PERSONAL','DEPÓSITO AL BANCO','OTRO'];   // destino opcional
 var renVista='lista', renSelId=null, renDraft=null;
 async function renDatos(){
   var arqs=[]; for(var i=0;i<GV_SUC.length;i++){ try{ (await loadArqSuc(GV_SUC[i].id)).forEach(function(a){ arqs.push(a); }); }catch(e){} }
@@ -3214,23 +3217,45 @@ function renCalc(D){
   var cont=conteoTotal(d.conteo);
   return {n:n, tc:r2(tc), tr:r2(tr), cont:cont, difRec:r2(tr-tc), difCont:r2(cont-tr)};
 }
+// orden de la lista de cierres: por fecha o por sucursal (y dentro, por fecha y nro)
+var renOrden='fecha';
+function setRenOrden(o){ renOrden=o; renderArqueos(); }
+function renOrdenar(list,get){
+  return list.slice().sort(function(a,b){ var A=get(a), B=get(b);
+    if(renOrden==='suc'){ var sa=A.suc?gvSucName(A.suc):(A.sucTxt||''), sb=B.suc?gvSucName(B.suc):(B.sucTxt||''); if(sa!==sb) return sa<sb?-1:1; }
+    if(A.fecha!==B.fecha) return A.fecha<B.fecha?-1:1;
+    return (parseInt(A.nro)||0)-(parseInt(B.nro)||0); });
+}
+function renOrdenBtns(){ return '<div class="setpills" style="margin:0">'+[['fecha','Por fecha'],['suc','Por sucursal']].map(function(o){ return '<button class="'+(renOrden===o[0]?'on':'')+'" onclick="setRenOrden(\''+o[0]+'\')">'+o[1]+'</button>'; }).join('')+'</div>'; }
+// cabecera como la planilla: cantidad de cierres, total de dinero y total por sucursal
+function renCabNumHTML(items){
+  var g={}, tot=0; items.forEach(function(it){ var k=it.suc||('~'+(it.sucTxt||'')); g[k]=g[k]||{n:0,r:0}; g[k].n++; g[k].r+=num(it.rec); tot+=num(it.rec); });
+  var sucs=GV_SUC.filter(function(s){ return s.id!=='cine' || g.cine; }).map(function(s){ return s.id; });
+  Object.keys(g).forEach(function(k){ if(sucs.indexOf(k)<0) sucs.push(k); });
+  var h='<div>'+kvRow('Cant. cierres',items.length)+kvRow('Total dinero efectivo',bs(tot),'strong')+'</div><div>';
+  sucs.forEach(function(k){ var x=g[k]||{n:0,r:0}; h+=kvRow(esc(k.charAt(0)==='~'?k.slice(1):gvSucName(k))+' <span class="note">('+x.n+')</span>',fmt(x.r)); });
+  return h+'</div>';
+}
 function renNuevaHTML(body,D){
-  if(!renDraft) renDraft={fecha:today(), sel:{}, conteo:{}, destino:REN_DESTINOS[0], nota:''};
+  if(!renDraft) renDraft={fecha:today(), sel:{}, conteo:{}, destino:'', nota:''};
   body._D=D;
-  var d=renDraft;
-  var h='<div class="panel"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Nueva rendición</h3><button class="mini" style="margin-left:auto" onclick="setRenVista(\'lista\')">Volver</button></div>'
-    +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;align-items:flex-end"><label style="display:flex;flex-direction:column;gap:3px;font-size:12px">Fecha de la rendición<input class="fld" type="date" value="'+d.fecha+'" onchange="renSet(\'fecha\',this.value)"></label>'
-    +'<label style="display:flex;flex-direction:column;gap:3px;font-size:12px">Destino del dinero<select class="fld" onchange="renSet(\'destino\',this.value)">'+REN_DESTINOS.map(function(x){ return '<option'+(x===d.destino?' selected':'')+'>'+x+'</option>'; }).join('')+'</select></label>'
-    +'<label style="display:flex;flex-direction:column;gap:3px;font-size:12px;flex:1;min-width:180px">Nota<input class="fld" value="'+esc(d.nota)+'" placeholder="Opcional" oninput="renSet(\'nota\',this.value)"></label></div></div>';
-  h+='<div class="panel"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><h3 style="margin:0">Sobres por rendir ('+D.pend.length+')</h3><button class="mini" style="margin-left:auto" onclick="renTodos(true)">Marcar todos</button><button class="mini" onclick="renTodos(false)">Ninguno</button></div>';
-  if(!D.pend.length) h+='<div class="note">No hay sobres pendientes: todos los cierres ya están rendidos.</div>';
+  var d=renDraft, pend=renOrdenar(D.pend,function(a){ return a; });
+  var h='<div class="panel"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Nueva rendición</h3><span style="margin-left:auto"></span><button class="mini acc" id="renGuardarBtn" onclick="renGuardar(this)">Guardar rendición</button><button class="mini" onclick="setRenVista(\'lista\')">Volver</button></div>'
+    +'<div class="rencab"><div>'
+      +'<label class="renlab">Fecha rendición<input class="fld" type="date" value="'+d.fecha+'" onchange="renSet(\'fecha\',this.value)"></label>'
+      +'<label class="renlab">Destino del dinero<select class="fld" onchange="renSet(\'destino\',this.value)">'+REN_DESTINOS.map(function(x){ return '<option value="'+x+'"'+(x===d.destino?' selected':'')+'>'+(x||'— Sin indicar —')+'</option>'; }).join('')+'</select></label>'
+      +'<label class="renlab">Nota<input class="fld" value="'+esc(d.nota)+'" placeholder="Opcional" oninput="renDraft.nota=this.value"></label>'
+    +'</div><div id="renCabNum" class="rencab2"></div></div><div id="renTot"></div></div>';
+  h+='<div class="panel"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><h3 style="margin:0">Sobres por rendir ('+D.pend.length+')</h3>'+renOrdenBtns()+'<span style="margin-left:auto"></span><button class="mini" onclick="renTodos(true)">Marcar todos</button><button class="mini" onclick="renTodos(false)">Ninguno</button></div>';
+  if(!pend.length) h+='<div class="note">No hay sobres pendientes: todos los cierres ya están rendidos.</div>';
   else{
-    h+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th></th><th>Fecha cierre</th><th>Sucursal</th><th>Nro</th><th>Cajero</th><th class="r">Según cierre</th><th class="r">Recibido</th><th class="r">Diferencia</th><th>Comentario</th></tr></thead><tbody>';
-    D.pend.forEach(function(a){ var it=d.sel[a.id], dif=it?r2(num(it.rec)-num(a.sobre)):0;
-      h+='<tr><td><input type="checkbox"'+(it?' checked':'')+' onchange="renMarca(\''+a.id+'\',this.checked)"></td><td>'+fullDate(a.fecha)+'</td><td>'+esc(gvSucName(a.suc))+'</td><td class="mono">'+esc(a.nro)+'</td><td>'+esc(a.cajero||'')+'</td><td class="mono">'+fmt(a.sobre)+'</td>'
+    h+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th></th><th>Nro.</th><th>Nro. cierre</th><th class="r">Dinero en sobre</th><th>Sucursal</th><th class="r">Importe según cierre</th><th class="r">Diferencia</th><th>Comentarios</th><th>Fecha cierre</th></tr></thead><tbody>';
+    pend.forEach(function(a,i){ var it=d.sel[a.id], dif=it?r2(num(it.rec)-num(a.sobre)):0;
+      h+='<tr><td><input type="checkbox"'+(it?' checked':'')+' onchange="renMarca(\''+a.id+'\',this.checked)"></td><td class="mono">'+(i+1)+'</td><td class="mono">'+esc(a.nro)+'</td>'
         +'<td><input class="fld nomay" style="width:100px;text-align:right;padding:6px" inputmode="decimal"'+(it?'':' disabled')+' value="'+(it?esc(it.rec):'')+'" onchange="renItem(\''+a.id+'\',\'rec\',this.value)"></td>'
-        +'<td class="mono" id="rd_'+a.id+'">'+(it&&dif?fmt(dif):'')+'</td>'
-        +'<td><input class="fld" style="min-width:140px;padding:6px"'+(it?'':' disabled')+' value="'+(it?esc(it.com||''):'')+'" onchange="renItem(\''+a.id+'\',\'com\',this.value)"></td></tr>'; });
+        +'<td>'+esc(gvSucName(a.suc))+'</td><td class="mono">'+fmt(a.sobre)+'</td>'
+        +'<td class="mono" id="rd_'+a.id+'">'+(it?fmt(dif):'')+'</td>'
+        +'<td><input class="fld" style="min-width:140px;padding:6px"'+(it?'':' disabled')+' value="'+(it?esc(it.com||''):'')+'" onchange="renItem(\''+a.id+'\',\'com\',this.value)"></td><td>'+fullDate(a.fecha)+'</td></tr>'; });
     h+='</tbody></table></div>';
   }
   h+='</div>';
@@ -3238,29 +3263,21 @@ function renNuevaHTML(body,D){
   h+='<div class="panel"><div style="display:flex;align-items:center;gap:8px"><h3 style="margin:0">Conteo del dinero <span class="note" style="font-weight:400">(opcional)</span></h3><button class="mini" style="margin-left:auto" onclick="renVerConteo()">'+(abierto?'Ocultar':'Contar billetes')+'</button></div>'
     +(abierto?'<div class="conteogrid" style="margin-top:10px">'+GV_DENOMS.map(function(dn){ var q=d.conteo[dn[0]];
       return '<label class="cndenom"><span>'+dn[2]+'</span><input class="fld nomay" inputmode="numeric" value="'+(q||'')+'" placeholder="0" onchange="renCont(\''+dn[0]+'\',this.value)"></label>'; }).join('')+'</div>':'')+'</div>';
-  h+='<div class="panel" id="renTot"></div>';
   body.innerHTML=h;
   renTotales();
 }
 function renTotales(){
   var box=document.getElementById('renTot'), body=document.getElementById('arqBody'); if(!box||!body||!body._D) return;
-  var c=renCalc(body._D), ps=renPagosSemana(renDraft.fecha);
-  var its=[]; body._D.pend.forEach(function(a){ var it=renDraft.sel[a.id]; if(it) its.push({suc:a.suc, cierre:a.sobre, rec:it.rec}); });
-  var h='<h3 style="margin-top:0">Totales</h3>'+renPorSucHTML(its)+'<div class="strip" style="margin:0 0 10px">'+statHTML('Sobres',c.n,'g')+statHTML('Según cierres',bs(c.tc),'p')+statHTML('Recibido',bs(c.tr),'s')+(c.cont?statHTML('Contado',bs(c.cont),'g'):'')+'</div>'
-    +'<div class="kv"><span>Recibido − según cierres</span>'+estBadge(arqEstado(c.difRec),c.difRec)+'</div>'
-    +(c.cont?'<div class="kv"><span>Contado − recibido</span>'+estBadge(arqEstado(c.difCont),c.difCont)+'</div>':'');
-  if(renDraft.destino==='PAGO AL PERSONAL') h+='<div class="note" style="margin-top:8px">Pagos al personal de la semana '+wkLabel(ps.wk)+' que no salieron de la caja: <b>'+bs(ps.total)+'</b>. '+(ps.total>(c.cont||c.tr)?'Faltan <b>'+bs(ps.total-(c.cont||c.tr))+'</b> además de esta rendición.':(ps.total?'Esta rendición alcanza para cubrirlos.':''))+'</div>';
-  h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="mini acc" onclick="renGuardar(this)"'+(c.n?'':' disabled')+'>Guardar rendición</button></div>';
+  var c=renCalc(body._D), ps=renPagosSemana(renDraft.fecha), its=[];
+  body._D.pend.forEach(function(a){ var it=renDraft.sel[a.id]; if(it) its.push({suc:a.suc, rec:it.rec}); });
+  var cn=document.getElementById('renCabNum'); if(cn) cn.innerHTML=renCabNumHTML(its);
+  var h='<div style="display:flex;gap:8px 18px;flex-wrap:wrap;margin-top:10px;align-items:center">'
+    +'<span class="note">Según cierres: <b>'+bs(c.tc)+'</b></span>'
+    +'<span class="note">Diferencia: '+estBadge(arqEstado(c.difRec),c.difRec)+'</span>'
+    +(c.cont?'<span class="note">Contado: <b>'+bs(c.cont)+'</b> '+estBadge(arqEstado(c.difCont),c.difCont)+'</span>':'')+'</div>';
+  if(renDraft.destino==='PAGO AL PERSONAL') h+='<div class="note" style="margin-top:6px">Pagos al personal de la semana '+wkLabel(ps.wk)+' que no salieron de la caja: <b>'+bs(ps.total)+'</b>. '+(ps.total>(c.cont||c.tr)?'Faltan <b>'+bs(ps.total-(c.cont||c.tr))+'</b> además de esta rendición.':(ps.total?'Esta rendición alcanza para cubrirlos.':''))+'</div>';
   box.innerHTML=h;
-}
-// total por sucursal (como el cuadro de arriba de la planilla): cantidad de cierres, según cierres y dinero en sobre
-function renPorSucHTML(items){
-  var g={}, orden=[];
-  items.forEach(function(it){ var k=it.suc?gvSucName(it.suc):(it.sucTxt||'—'); if(!g[k]){ g[k]={n:0,c:0,r:0}; orden.push(k); } g[k].n++; g[k].c+=num(it.cierre); g[k].r+=num(it.rec); });
-  if(!orden.length) return '';
-  var h='<div style="overflow-x:auto;margin-bottom:12px"><table class="tbl"><thead><tr><th>Sucursal</th><th class="r">Cierres</th><th class="r">Según cierres</th><th class="r">Dinero en sobre</th></tr></thead><tbody>';
-  orden.forEach(function(k){ h+='<tr><td><b>'+esc(k)+'</b></td><td class="mono">'+g[k].n+'</td><td class="mono">'+fmt(g[k].c)+'</td><td class="mono"><b>'+fmt(g[k].r)+'</b></td></tr>'; });
-  return h+'</tbody></table></div>';
+  var b=document.getElementById('renGuardarBtn'); if(b) b.disabled=!c.n;
 }
 function renVerConteo(){ var ab=renDraft.verConteo||conteoTotal(renDraft.conteo)>0; renDraft.verConteo=!ab; if(ab) renDraft.conteo={}; renNuevaHTML(document.getElementById('arqBody'),document.getElementById('arqBody')._D); }
 function renSet(k,v){ renDraft[k]=v; renTotales(); }
@@ -3269,7 +3286,7 @@ function renMarca(id,on){ var D=document.getElementById('arqBody')._D; var a=D.p
   renNuevaHTML(document.getElementById('arqBody'),D); }
 function renTodos(on){ var D=document.getElementById('arqBody')._D; renDraft.sel={}; if(on) D.pend.forEach(function(a){ renDraft.sel[a.id]={rec:r2(a.sobre), com:''}; }); renNuevaHTML(document.getElementById('arqBody'),D); }
 function renItem(id,k,v){ var it=renDraft.sel[id]; if(!it) return; it[k]=k==='rec'?r2(String(v).replace(',','.')):v;
-  if(k==='rec'){ var D=document.getElementById('arqBody')._D, a=D.pend.filter(function(x){ return x.id===id; })[0], e=document.getElementById('rd_'+id); var dif=r2(it.rec-num(a.sobre)); if(e) e.textContent=dif?fmt(dif):''; }
+  if(k==='rec'){ var D=document.getElementById('arqBody')._D, a=D.pend.filter(function(x){ return x.id===id; })[0], e=document.getElementById('rd_'+id); if(e) e.textContent=fmt(r2(it.rec-num(a.sobre))); }
   renTotales(); }
 function renCont(k,v){ if(num(v)) renDraft.conteo[k]=num(v); else delete renDraft.conteo[k]; renTotales(); }
 async function renGuardar(btn){
@@ -3295,17 +3312,18 @@ async function renGuardar(btn){
   }catch(e){ btn.disabled=false; btn.textContent='Guardar rendición'; alert('No se pudo guardar: '+e.message); }
 }
 function renDetalleHTML(r){
-  var h='<div class="alab">Total por sucursal</div>'+renPorSucHTML(r.items||[])+'<div class="alab">Detalle de cierres</div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Fecha cierre</th><th>Sucursal</th><th>Nro</th><th class="r">Según cierre</th><th class="r">Recibido</th><th class="r">Diferencia</th><th>Comentario</th></tr></thead><tbody>';
-  (r.items||[]).forEach(function(it){ h+='<tr><td>'+fullDate(it.fechaCierre)+(it.revisar?' <span class="tag" style="background:#fdecc8;color:#8a5a00">REVISAR FECHA</span>':'')+'</td><td>'+esc(it.suc?gvSucName(it.suc):(it.sucTxt||''))+'</td><td class="mono">'+esc(it.nro)+'</td><td class="mono">'+fmt(it.cierre)+'</td><td class="mono">'+fmt(it.rec)+'</td><td class="mono">'+(it.dif?fmt(it.dif):'')+'</td><td>'+esc(it.com||'')+'</td></tr>'; });
-  h+='</tbody><tfoot><tr><td colspan="3"><b>Total</b></td><td class="mono"><b>'+fmt(r.totalCierres)+'</b></td><td class="mono"><b>'+fmt(r.totalRecibido)+'</b></td><td class="mono"><b>'+fmt(r2(num(r.totalRecibido)-num(r.totalCierres)))+'</b></td><td></td></tr></tfoot></table></div>';
+  var its=renOrdenar(r.items||[],function(it){ return {suc:it.suc, sucTxt:it.sucTxt, fecha:it.fechaCierre||'', nro:it.nro}; });
+  var h='<div class="rencab"><div>'+kvRow('Fecha rendición',fullDate(r.fecha))+(r.destino?kvRow('Destino del dinero',esc(r.destino)):'')+(r.nota?kvRow('Nota',esc(r.nota)):'')+(r.hechoPor?kvRow('Hecha por',esc(r.hechoPor)):'')+'</div><div class="rencab2">'+renCabNumHTML(r.items||[])+'</div></div>';
+  h+='<div style="overflow-x:auto;margin-top:12px"><table class="tbl"><thead><tr><th>Nro.</th><th>Nro. cierre</th><th class="r">Dinero en sobre</th><th>Sucursal</th><th class="r">Importe según cierre</th><th class="r">Diferencia</th><th>Comentarios</th><th>Fecha cierre</th><th>Fecha rendición</th></tr></thead><tbody>';
+  its.forEach(function(it,i){ h+='<tr><td class="mono">'+(i+1)+'</td><td class="mono">'+esc(it.nro)+'</td><td class="mono">'+fmt(it.rec)+'</td><td>'+esc(it.suc?gvSucName(it.suc):(it.sucTxt||''))+'</td><td class="mono">'+fmt(it.cierre)+'</td><td class="mono">'+fmt(it.dif)+'</td><td>'+esc(it.com||'')+'</td><td>'+fullDate(it.fechaCierre)+(it.revisar?' <span class="tag" style="background:#fdecc8;color:#8a5a00">REVISAR</span>':'')+'</td><td>'+fullDate(r.fecha)+'</td></tr>'; });
+  h+='</tbody><tfoot><tr><td colspan="2"><b>Total</b></td><td class="mono"><b>'+fmt(r.totalRecibido)+'</b></td><td></td><td class="mono"><b>'+fmt(r.totalCierres)+'</b></td><td class="mono"><b>'+fmt(r2(num(r.totalRecibido)-num(r.totalCierres)))+'</b></td><td colspan="3"></td></tr></tfoot></table></div>';
   var cnt=GV_DENOMS.map(function(dn){ var q=num((r.conteo||{})[dn[0]]); return q?kvRow(dn[2]+' × '+q,fmt(q*dn[1])):''; }).join('');
-  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:12px">'+(cnt?'<div><div class="alab">Conteo del dinero</div>'+cnt+kvRow('Total contado',fmt(r.totalContado),'strong')+'</div>':'')
-    +'<div><div class="alab">Datos</div>'+kvRow('Fecha',fullDate(r.fecha))+kvRow('Destino del dinero',esc(r.destino||'—'))+(r.nota?kvRow('Nota',esc(r.nota)):'')+(r.hechoPor?kvRow('Hecha por',esc(r.hechoPor)):'')+'</div></div>';
+  if(cnt) h+='<div style="max-width:360px;margin-top:12px"><div class="alab">Conteo del dinero</div>'+cnt+kvRow('Total contado',fmt(r.totalContado),'strong')+'</div>';
   return h;
 }
 function renVerHTML(body,r){
   var ps=renPagosSemana(r.fecha);
-  body.innerHTML='<div class="panel"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0">Rendición Nº '+esc(r.nro)+' · '+fullDate(r.fecha)+'</h3><button class="mini" style="margin-left:auto" onclick="renPDF(\''+r.id+'\')">'+ARQ_IC.dl+' Descargar PDF</button><button class="mini" onclick="setRenVista(\'lista\')">Volver</button></div>'
+  body.innerHTML='<div class="panel"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px"><h3 style="margin:0">Rendición Nº '+esc(r.nro)+' · '+fullDate(r.fecha)+'</h3>'+renOrdenBtns()+'<span style="margin-left:auto"></span><button class="mini" onclick="renPDF(\''+r.id+'\')">'+ARQ_IC.dl+' Descargar PDF</button><button class="mini" onclick="setRenVista(\'lista\')">Volver</button></div>'
     +renDetalleHTML(r)
     +(r.destino==='PAGO AL PERSONAL'?'<div class="note" style="margin-top:10px">Pagos al personal de la semana '+wkLabel(ps.wk)+' que no salieron de la caja: <b>'+bs(ps.total)+'</b>.</div>':'')+'</div>';
 }
