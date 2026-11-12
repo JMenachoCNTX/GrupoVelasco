@@ -932,7 +932,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v58';
+var APP_VERSION = 'v59';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -3164,9 +3164,144 @@ var ARQ_IC={
   dl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M12 4v10M8 10l4 4 4-4"/><path d="M5 19h14"/></svg>',
   mail:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg>',
   cam:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  ren:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M4 7h16v12H4z"/><path d="M4 7l8 6 8-6"/><path d="M9 3h6"/></svg>',
   ver:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.8"/></svg>'
 };
-function setArqTab(t){ arqTab=t; arqSel=null; renderArqueos(); }
+function setArqTab(t){ arqTab=t; arqSel=null; if(t==='ren') renVista='lista'; renderArqueos(); }
+/* ================= RENDICIONES (solo admin) =================
+   Juntan los sobres de varios cierres: se marca cuáles llegaron, cuánto traía cada uno y se cuentan los billetes.
+   Cada rendición se guarda en gvArqueos con suc '_rend' (id 'rend_NN'); cada arqueo rendido queda con a.rend={id,nro,fecha}.
+   El dinero hoy se usa para pagar al personal (destino); se compara con los pagos de esa semana que no salieron de la caja. */
+var REN_SUC='_rend', REN_DESDE='2026-01-01', REN_DESTINOS=['PAGO AL PERSONAL','DEPÓSITO AL BANCO','OTRO'];
+var renVista='lista', renSelId=null, renDraft=null;
+async function renDatos(){
+  var arqs=[]; for(var i=0;i<GV_SUC.length;i++){ try{ (await loadArqSuc(GV_SUC[i].id)).forEach(function(a){ arqs.push(a); }); }catch(e){} }
+  var rens=[]; try{ rens=(await loadArqSuc(REN_SUC)).slice(); }catch(e){}
+  rens.sort(function(a,b){ return (b.nro||0)-(a.nro||0); });
+  var pend=arqs.filter(function(a){ return !a.rend && (a.fecha||'')>=REN_DESDE; });
+  pend.sort(function(a,b){ return a.fecha<b.fecha?-1:(a.fecha>b.fecha?1:(parseInt(a.nro)||0)-(parseInt(b.nro)||0)); });
+  return {arqs:arqs, rens:rens, pend:pend};
+}
+function renPagosSemana(fecha){
+  // pagos al personal de la semana de la rendición que NO salieron de la caja (el "efectivo del jueves")
+  var wk=weekKey(mondayOf(parseISO(fecha))), t=0;
+  Object.keys(DB.weeks[wk]||{}).forEach(function(id){ var en=DB.weeks[wk][id]; if(!en) return;
+    (en.d||[]).forEach(function(c){ t+=num(c.pm); });
+    (en.p||[]).forEach(function(p){ if(p.origen!=='caja') t+=num(p.m); }); });
+  return {wk:wk, total:r2(t)};
+}
+function setRenVista(v,id){ renVista=v; renSelId=id||null; if(v==='nueva') renDraft=null; renderArqueos(); }
+async function renderRendiciones(body){
+  body.innerHTML='<div class="empty">Cargando rendiciones…</div>';
+  var D; try{ D=await renDatos(); }catch(e){ body.innerHTML='<div class="empty">No se pudo leer de la nube.<br>'+esc(e.message)+'</div>'; return; }
+  if(arqTab!=='ren') return;
+  document.getElementById('arqStrip').innerHTML='';
+  if(renVista==='nueva') return renNuevaHTML(body,D);
+  if(renVista==='ver'){ var r=D.rens.filter(function(x){ return x.id===renSelId; })[0]; if(r) return renVerHTML(body,r); renVista='lista'; }
+  var tp=0; D.pend.forEach(function(a){ tp+=num(a.sobre); });
+  document.getElementById('arqStrip').innerHTML=statHTML('Sobres por rendir',D.pend.length,'g')+statHTML('Dinero por rendir',bs(tp),'p')+statHTML('Rendiciones',D.rens.length,'s');
+  var h='<div class="panel"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><div class="note" style="margin:0">Junta los sobres de los cierres, cuenta el dinero y compara con lo que dice cada arqueo.</div><button class="mini acc" style="margin-left:auto" onclick="setRenVista(\'nueva\')">+ Nueva rendición</button></div>'
+    +'<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Nro</th><th>Fecha</th><th>Cierres</th><th class="r">Según cierres</th><th class="r">Recibido</th><th class="r">Contado</th><th>Resultado</th><th>Destino</th><th></th></tr></thead><tbody>';
+  if(!D.rens.length) h+='<tr><td colspan="9" class="note" style="text-align:center;padding:16px">Aún no hay rendiciones.</td></tr>';
+  D.rens.forEach(function(r){ var dif=r2(num(r.totalRecibido)-num(r.totalCierres)), est=arqEstado(dif);
+    h+='<tr><td class="mono">'+esc(r.nro)+'</td><td>'+fullDate(r.fecha)+'</td><td class="mono">'+(r.items||[]).length+'</td><td class="mono">'+fmt(r.totalCierres)+'</td><td class="mono">'+fmt(r.totalRecibido)+'</td><td class="mono">'+(r.migrado?'—':fmt(r.totalContado))+'</td><td>'+estBadge(est,dif)+(r.revisar?' <span class="tag" style="background:#fdecc8;color:#8a5a00">REVISAR</span>':'')+'</td><td>'+esc(r.destino||'—')+'</td><td><button class="mini acc" onclick="setRenVista(\'ver\',\''+r.id+'\')">'+ARQ_IC.ver+' Ver</button></td></tr>'; });
+  h+='</tbody></table></div></div>';
+  body.innerHTML=h;
+}
+function renCalc(D){
+  var d=renDraft, tc=0, tr=0, n=0;
+  D.pend.forEach(function(a){ var it=d.sel[a.id]; if(!it) return; n++; tc+=num(a.sobre); tr+=num(it.rec); });
+  var cont=conteoTotal(d.conteo);
+  return {n:n, tc:r2(tc), tr:r2(tr), cont:cont, difRec:r2(tr-tc), difCont:r2(cont-tr)};
+}
+function renNuevaHTML(body,D){
+  if(!renDraft) renDraft={fecha:today(), sel:{}, conteo:{}, destino:REN_DESTINOS[0], nota:''};
+  body._D=D;
+  var d=renDraft;
+  var h='<div class="panel"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Nueva rendición</h3><button class="mini" style="margin-left:auto" onclick="setRenVista(\'lista\')">Volver</button></div>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;align-items:flex-end"><label style="display:flex;flex-direction:column;gap:3px;font-size:12px">Fecha de la rendición<input class="fld" type="date" value="'+d.fecha+'" onchange="renSet(\'fecha\',this.value)"></label>'
+    +'<label style="display:flex;flex-direction:column;gap:3px;font-size:12px">Destino del dinero<select class="fld" onchange="renSet(\'destino\',this.value)">'+REN_DESTINOS.map(function(x){ return '<option'+(x===d.destino?' selected':'')+'>'+x+'</option>'; }).join('')+'</select></label>'
+    +'<label style="display:flex;flex-direction:column;gap:3px;font-size:12px;flex:1;min-width:180px">Nota<input class="fld" value="'+esc(d.nota)+'" placeholder="Opcional" oninput="renSet(\'nota\',this.value)"></label></div></div>';
+  h+='<div class="panel"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><h3 style="margin:0">Sobres por rendir ('+D.pend.length+')</h3><button class="mini" style="margin-left:auto" onclick="renTodos(true)">Marcar todos</button><button class="mini" onclick="renTodos(false)">Ninguno</button></div>';
+  if(!D.pend.length) h+='<div class="note">No hay sobres pendientes: todos los cierres ya están rendidos.</div>';
+  else{
+    h+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th></th><th>Fecha cierre</th><th>Sucursal</th><th>Nro</th><th>Cajero</th><th class="r">Según cierre</th><th class="r">Recibido</th><th class="r">Diferencia</th><th>Comentario</th></tr></thead><tbody>';
+    D.pend.forEach(function(a){ var it=d.sel[a.id], dif=it?r2(num(it.rec)-num(a.sobre)):0;
+      h+='<tr><td><input type="checkbox"'+(it?' checked':'')+' onchange="renMarca(\''+a.id+'\',this.checked)"></td><td>'+fullDate(a.fecha)+'</td><td>'+esc(gvSucName(a.suc))+'</td><td class="mono">'+esc(a.nro)+'</td><td>'+esc(a.cajero||'')+'</td><td class="mono">'+fmt(a.sobre)+'</td>'
+        +'<td><input class="fld nomay" style="width:100px;text-align:right;padding:6px" inputmode="decimal"'+(it?'':' disabled')+' value="'+(it?esc(it.rec):'')+'" onchange="renItem(\''+a.id+'\',\'rec\',this.value)"></td>'
+        +'<td class="mono" id="rd_'+a.id+'">'+(it&&dif?fmt(dif):'')+'</td>'
+        +'<td><input class="fld" style="min-width:140px;padding:6px"'+(it?'':' disabled')+' value="'+(it?esc(it.com||''):'')+'" onchange="renItem(\''+a.id+'\',\'com\',this.value)"></td></tr>'; });
+    h+='</tbody></table></div>';
+  }
+  h+='</div>';
+  h+='<div class="panel"><h3 style="margin-top:0">Conteo del dinero</h3><div class="conteogrid">'+GV_DENOMS.map(function(dn){ var q=d.conteo[dn[0]];
+      return '<label class="cndenom"><span>'+dn[2]+'</span><input class="fld nomay" inputmode="numeric" value="'+(q||'')+'" placeholder="0" onchange="renCont(\''+dn[0]+'\',this.value)"></label>'; }).join('')+'</div></div>';
+  h+='<div class="panel" id="renTot"></div>';
+  body.innerHTML=h;
+  renTotales();
+}
+function renTotales(){
+  var box=document.getElementById('renTot'), body=document.getElementById('arqBody'); if(!box||!body||!body._D) return;
+  var c=renCalc(body._D), ps=renPagosSemana(renDraft.fecha);
+  var h='<div class="strip" style="margin:0 0 10px">'+statHTML('Sobres',c.n,'g')+statHTML('Según cierres',bs(c.tc),'p')+statHTML('Recibido',bs(c.tr),'s')+statHTML('Contado',bs(c.cont),'g')+'</div>'
+    +'<div class="kv"><span>Recibido − según cierres</span>'+estBadge(arqEstado(c.difRec),c.difRec)+'</div>'
+    +'<div class="kv"><span>Contado − recibido</span>'+estBadge(arqEstado(c.difCont),c.difCont)+'</div>';
+  if(renDraft.destino==='PAGO AL PERSONAL') h+='<div class="note" style="margin-top:8px">Pagos al personal de la semana '+wkLabel(ps.wk)+' que no salieron de la caja: <b>'+bs(ps.total)+'</b>. '+(ps.total>c.cont?'Faltan <b>'+bs(ps.total-c.cont)+'</b> además de esta rendición.':(ps.total?'Esta rendición alcanza para cubrirlos.':''))+'</div>';
+  h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="mini acc" onclick="renGuardar(this)"'+(c.n?'':' disabled')+'>Guardar rendición</button></div>';
+  box.innerHTML=h;
+}
+function renSet(k,v){ renDraft[k]=v; renTotales(); }
+function renMarca(id,on){ var D=document.getElementById('arqBody')._D; var a=D.pend.filter(function(x){ return x.id===id; })[0];
+  if(on) renDraft.sel[id]={rec:r2(a?a.sobre:0), com:''}; else delete renDraft.sel[id];
+  renNuevaHTML(document.getElementById('arqBody'),D); }
+function renTodos(on){ var D=document.getElementById('arqBody')._D; renDraft.sel={}; if(on) D.pend.forEach(function(a){ renDraft.sel[a.id]={rec:r2(a.sobre), com:''}; }); renNuevaHTML(document.getElementById('arqBody'),D); }
+function renItem(id,k,v){ var it=renDraft.sel[id]; if(!it) return; it[k]=k==='rec'?r2(String(v).replace(',','.')):v;
+  if(k==='rec'){ var D=document.getElementById('arqBody')._D, a=D.pend.filter(function(x){ return x.id===id; })[0], e=document.getElementById('rd_'+id); var dif=r2(it.rec-num(a.sobre)); if(e) e.textContent=dif?fmt(dif):''; }
+  renTotales(); }
+function renCont(k,v){ if(num(v)) renDraft.conteo[k]=num(v); else delete renDraft.conteo[k]; renTotales(); }
+async function renGuardar(btn){
+  var body=document.getElementById('arqBody'), D=body._D, c=renCalc(D);
+  if(!c.n){ toast('Marca al menos un sobre'); return; }
+  if(Math.abs(c.difCont)>=0.01 && !confirm('El dinero contado ('+bs(c.cont)+') no coincide con lo recibido ('+bs(c.tr)+'). ¿Guardar igual?')) return;
+  btn.disabled=true; btn.textContent='Guardando…';
+  try{
+    var db=await gvReady();
+    delete gvCache[REN_SUC]; var rens=await loadArqSuc(REN_SUC), nro=1; rens.forEach(function(r){ if((r.nro||0)>=nro) nro=r.nro+1; });
+    var id='rend_'+nro, items=[];
+    D.pend.forEach(function(a){ var it=renDraft.sel[a.id]; if(!it) return;
+      items.push({id:a.id, suc:a.suc, nro:a.nro, fechaCierre:a.fecha, cajero:a.cajero||'', cierre:r2(a.sobre), rec:r2(it.rec), dif:r2(num(it.rec)-num(a.sobre)), com:it.com||''}); });
+    var doc={id:id, suc:REN_SUC, nro:nro, fecha:renDraft.fecha, items:items, conteo:renDraft.conteo, totalCierres:c.tc, totalRecibido:c.tr, totalContado:c.cont,
+      destino:renDraft.destino, nota:renDraft.nota||'', hechoPor:operadorNombre(), creado:new Date().toISOString()};
+    await db.collection('gvArqueos').doc(id).set(doc);
+    var marca={id:id, nro:nro, fecha:renDraft.fecha};
+    for(var i=0;i<items.length;i++){ await db.collection('gvArqueos').doc(items[i].id).set({rend:marca},{merge:true}); }
+    D.arqs.forEach(function(a){ if(renDraft.sel[a.id]) a.rend=marca; });
+    gvCache[REN_SUC]=rens.concat([doc]);
+    toast('Rendición Nº '+nro+' guardada');
+    renDraft=null; setRenVista('ver',id);
+  }catch(e){ btn.disabled=false; btn.textContent='Guardar rendición'; alert('No se pudo guardar: '+e.message); }
+}
+function renDetalleHTML(r){
+  var h='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Fecha cierre</th><th>Sucursal</th><th>Nro</th><th class="r">Según cierre</th><th class="r">Recibido</th><th class="r">Diferencia</th><th>Comentario</th></tr></thead><tbody>';
+  (r.items||[]).forEach(function(it){ h+='<tr><td>'+fullDate(it.fechaCierre)+(it.revisar?' <span class="tag" style="background:#fdecc8;color:#8a5a00">REVISAR FECHA</span>':'')+'</td><td>'+esc(it.suc?gvSucName(it.suc):(it.sucTxt||''))+'</td><td class="mono">'+esc(it.nro)+'</td><td class="mono">'+fmt(it.cierre)+'</td><td class="mono">'+fmt(it.rec)+'</td><td class="mono">'+(it.dif?fmt(it.dif):'')+'</td><td>'+esc(it.com||'')+'</td></tr>'; });
+  h+='</tbody><tfoot><tr><td colspan="3"><b>Total</b></td><td class="mono"><b>'+fmt(r.totalCierres)+'</b></td><td class="mono"><b>'+fmt(r.totalRecibido)+'</b></td><td class="mono"><b>'+fmt(r2(num(r.totalRecibido)-num(r.totalCierres)))+'</b></td><td></td></tr></tfoot></table></div>';
+  var cnt=GV_DENOMS.map(function(dn){ var q=num((r.conteo||{})[dn[0]]); return q?kvRow(dn[2]+' × '+q,fmt(q*dn[1])):''; }).join('');
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:12px"><div><div class="alab">Conteo del dinero</div>'+(cnt||'<div class="note">'+(r.migrado?'Rendición pasada desde la planilla: no tiene el conteo de billetes.':'Sin conteo.')+'</div>')+(cnt?kvRow('Total contado',fmt(r.totalContado),'strong'):'')+'</div>'
+    +'<div><div class="alab">Datos</div>'+kvRow('Fecha',fullDate(r.fecha))+kvRow('Destino del dinero',esc(r.destino||'—'))+(r.nota?kvRow('Nota',esc(r.nota)):'')+(r.hechoPor?kvRow('Hecha por',esc(r.hechoPor)):'')+'</div></div>';
+  return h;
+}
+function renVerHTML(body,r){
+  var ps=renPagosSemana(r.fecha);
+  body.innerHTML='<div class="panel"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0">Rendición Nº '+esc(r.nro)+' · '+fullDate(r.fecha)+'</h3><button class="mini" style="margin-left:auto" onclick="renPDF(\''+r.id+'\')">'+ARQ_IC.dl+' Descargar PDF</button><button class="mini" onclick="setRenVista(\'lista\')">Volver</button></div>'
+    +renDetalleHTML(r)
+    +(r.destino==='PAGO AL PERSONAL'?'<div class="note" style="margin-top:10px">Pagos al personal de la semana '+wkLabel(ps.wk)+' que no salieron de la caja: <b>'+bs(ps.total)+'</b>.</div>':'')+'</div>';
+}
+async function renPDF(id){
+  var r=(gvCache[REN_SUC]||[]).filter(function(x){ return x.id===id; })[0]; if(!r) return;
+  toast('Armando el PDF…');
+  try{ var pdf=await pdfDeHTML('Rendición de caja Nº '+r.nro,'GrupoVelasco SRL · '+fullDate(r.fecha)+' · '+(r.items||[]).length+' cierres',renDetalleHTML(r)); pdf.save('Rendicion_'+r.nro+'_'+r.fecha+'.pdf'); }
+  catch(e){ alert('No se pudo armar el PDF: '+e.message); }
+}
 function setArqDia(d){ arqDia=d; renderArqueos(); }
 function setArqF(k,v){ if(k==='m') arqFMarca=v; else arqFCanal=v; renderArqueos(); }
 function arqListHide(hide){
@@ -3191,8 +3326,12 @@ async function renderArqueos(){
     arqSel=null;
   }
   arqListHide(false); document.body.classList.remove('arqWide'); draft=null; arqRO=false;
-  document.getElementById('arqTabs').innerHTML=[['arq','Historial Arqueos'],['gas','Historial Gastos'],['ord','Historial Órdenes']].map(function(t){
+  document.getElementById('arqTabs').innerHTML=[['arq','Historial Arqueos'],['gas','Historial Gastos'],['ord','Historial Órdenes']].concat(isAdmin()?[['ren','Rendiciones']]:[]).map(function(t){
     return '<button class="'+(arqTab===t[0]?'on':'')+'" onclick="setArqTab(\''+t[0]+'\')">'+ARQ_IC[t[0]]+' '+t[1]+'</button>'; }).join('');
+  if(arqTab==='ren'){
+    if(isAdmin()){ ['arqSucPills','arqMesPills','arqHelp'].forEach(function(id){ document.getElementById(id).style.display='none'; }); document.getElementById('arqStrip').innerHTML=''; return renderRendiciones(body); }
+    arqTab='arq';
+  }
   document.getElementById('arqSucPills').innerHTML = GV_SUC.filter(function(s){ return !sucDeCaja() || s.id===sucDeCaja(); }).map(function(s){
     return '<button class="'+(s.id===arqSuc?'on':'')+'" onclick="setArqSuc(\''+s.id+'\')">'+s.name+'</button>'; }).join('');
   body.innerHTML='<div class="empty">Cargando arqueos…</div>';
@@ -3200,6 +3339,7 @@ async function renderArqueos(){
   var arr;
   try{ arr=await loadArqSuc(arqSuc); }
   catch(e){ body.innerHTML='<div class="empty">No se pudo leer de la nube.<br>'+esc(e.message)+'</div>'; return; }
+  if(arqTab==='ren' || arqSel || arqMode==='new') return;   // mientras cargaba, se cambió de vista
   if(cajaDesde()){ var cd=cajaDesde(); arr=arr.filter(function(a){ return a.fecha>=cd; }); }
   if(!arr.length){ body.innerHTML='<div class="empty"><img class="cl" src="assets/nummeros/clasicos/pitagoras-inventario.jpg?v=44" alt="" loading="lazy">'+(cajaDesde()?'No hay arqueos en los últimos '+CAJA_DIAS+' días.':'Esta sucursal aún no tiene arqueos registrados.')+'</div>'; return; }
   var meses=[], seen={};
@@ -3221,7 +3361,7 @@ async function renderArqueos(){
     h='<div class="panel">'+tool+'<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Fecha</th><th>Nro</th><th>Cajero</th><th>Turno</th><th class="r">Ventas</th><th class="r">Gastos</th><th class="r">Saldo</th><th class="r">Sobre</th><th>Resultado</th><th></th></tr></thead><tbody>';
     sel.forEach(function(a){
       var est=arqEstado(num(a.difArqueo)), cls=est==='CUADRADO'?'b-ok':(est==='SOBRANTE'?'b-par':'b-no');
-      h+='<tr><td>'+fmtDate(a.fecha)+'</td><td class="mono">'+esc(a.nro)+'</td><td>'+esc(a.cajero)+'</td><td>'+esc(a.turno||'')+'</td><td class="mono">'+fmt(a.ventasExcel)+'</td><td class="mono">'+fmt(a.totalGastos)+'</td><td class="mono">'+fmt(a.saldo)+'</td><td class="mono">'+fmt(a.sobre)+'</td><td><span class="abadge '+cls+'">'+est+(est!=='CUADRADO'?' '+fmt(Math.abs(num(a.difArqueo))):'')+'</span></td><td><button class="mini acc" onclick="openArq(\''+a.id+'\')">'+ARQ_IC.ver+' Ver</button></td></tr>';
+      h+='<tr><td>'+fmtDate(a.fecha)+'</td><td class="mono">'+esc(a.nro)+'</td><td>'+esc(a.cajero)+'</td><td>'+esc(a.turno||'')+'</td><td class="mono">'+fmt(a.ventasExcel)+'</td><td class="mono">'+fmt(a.totalGastos)+'</td><td class="mono">'+fmt(a.saldo)+'</td><td class="mono">'+fmt(a.sobre)+'</td><td><span class="abadge '+cls+'">'+est+(est!=='CUADRADO'?' '+fmt(Math.abs(num(a.difArqueo))):'')+'</span>'+(isAdmin()&&a.rend?' <span class="tag" title="Rendido el '+fullDate(a.rend.fecha)+'">RENDIDO Nº '+esc(a.rend.nro)+'</span>':'')+'</td><td><button class="mini acc" onclick="openArq(\''+a.id+'\')">'+ARQ_IC.ver+' Ver</button></td></tr>';
     });
     h+='</tbody></table></div></div>';
   } else if(arqTab==='gas'){
