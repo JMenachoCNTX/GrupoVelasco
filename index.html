@@ -932,7 +932,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v59';
+var APP_VERSION = 'v60';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -3243,12 +3243,22 @@ function renNuevaHTML(body,D){
 function renTotales(){
   var box=document.getElementById('renTot'), body=document.getElementById('arqBody'); if(!box||!body||!body._D) return;
   var c=renCalc(body._D), ps=renPagosSemana(renDraft.fecha);
-  var h='<div class="strip" style="margin:0 0 10px">'+statHTML('Sobres',c.n,'g')+statHTML('Según cierres',bs(c.tc),'p')+statHTML('Recibido',bs(c.tr),'s')+statHTML('Contado',bs(c.cont),'g')+'</div>'
+  var its=[]; body._D.pend.forEach(function(a){ var it=renDraft.sel[a.id]; if(it) its.push({suc:a.suc, cierre:a.sobre, rec:it.rec}); });
+  var h='<h3 style="margin-top:0">Totales</h3>'+renPorSucHTML(its)+'<div class="strip" style="margin:0 0 10px">'+statHTML('Sobres',c.n,'g')+statHTML('Según cierres',bs(c.tc),'p')+statHTML('Recibido',bs(c.tr),'s')+statHTML('Contado',bs(c.cont),'g')+'</div>'
     +'<div class="kv"><span>Recibido − según cierres</span>'+estBadge(arqEstado(c.difRec),c.difRec)+'</div>'
     +'<div class="kv"><span>Contado − recibido</span>'+estBadge(arqEstado(c.difCont),c.difCont)+'</div>';
   if(renDraft.destino==='PAGO AL PERSONAL') h+='<div class="note" style="margin-top:8px">Pagos al personal de la semana '+wkLabel(ps.wk)+' que no salieron de la caja: <b>'+bs(ps.total)+'</b>. '+(ps.total>c.cont?'Faltan <b>'+bs(ps.total-c.cont)+'</b> además de esta rendición.':(ps.total?'Esta rendición alcanza para cubrirlos.':''))+'</div>';
   h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="mini acc" onclick="renGuardar(this)"'+(c.n?'':' disabled')+'>Guardar rendición</button></div>';
   box.innerHTML=h;
+}
+// total por sucursal (como el cuadro de arriba de la planilla): cantidad de cierres, según cierres y dinero en sobre
+function renPorSucHTML(items){
+  var g={}, orden=[];
+  items.forEach(function(it){ var k=it.suc?gvSucName(it.suc):(it.sucTxt||'—'); if(!g[k]){ g[k]={n:0,c:0,r:0}; orden.push(k); } g[k].n++; g[k].c+=num(it.cierre); g[k].r+=num(it.rec); });
+  if(!orden.length) return '';
+  var h='<div style="overflow-x:auto;margin-bottom:12px"><table class="tbl"><thead><tr><th>Sucursal</th><th class="r">Cierres</th><th class="r">Según cierres</th><th class="r">Dinero en sobre</th></tr></thead><tbody>';
+  orden.forEach(function(k){ h+='<tr><td><b>'+esc(k)+'</b></td><td class="mono">'+g[k].n+'</td><td class="mono">'+fmt(g[k].c)+'</td><td class="mono"><b>'+fmt(g[k].r)+'</b></td></tr>'; });
+  return h+'</tbody></table></div>';
 }
 function renSet(k,v){ renDraft[k]=v; renTotales(); }
 function renMarca(id,on){ var D=document.getElementById('arqBody')._D; var a=D.pend.filter(function(x){ return x.id===id; })[0];
@@ -3282,7 +3292,7 @@ async function renGuardar(btn){
   }catch(e){ btn.disabled=false; btn.textContent='Guardar rendición'; alert('No se pudo guardar: '+e.message); }
 }
 function renDetalleHTML(r){
-  var h='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Fecha cierre</th><th>Sucursal</th><th>Nro</th><th class="r">Según cierre</th><th class="r">Recibido</th><th class="r">Diferencia</th><th>Comentario</th></tr></thead><tbody>';
+  var h='<div class="alab">Total por sucursal</div>'+renPorSucHTML(r.items||[])+'<div class="alab">Detalle de cierres</div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Fecha cierre</th><th>Sucursal</th><th>Nro</th><th class="r">Según cierre</th><th class="r">Recibido</th><th class="r">Diferencia</th><th>Comentario</th></tr></thead><tbody>';
   (r.items||[]).forEach(function(it){ h+='<tr><td>'+fullDate(it.fechaCierre)+(it.revisar?' <span class="tag" style="background:#fdecc8;color:#8a5a00">REVISAR FECHA</span>':'')+'</td><td>'+esc(it.suc?gvSucName(it.suc):(it.sucTxt||''))+'</td><td class="mono">'+esc(it.nro)+'</td><td class="mono">'+fmt(it.cierre)+'</td><td class="mono">'+fmt(it.rec)+'</td><td class="mono">'+(it.dif?fmt(it.dif):'')+'</td><td>'+esc(it.com||'')+'</td></tr>'; });
   h+='</tbody><tfoot><tr><td colspan="3"><b>Total</b></td><td class="mono"><b>'+fmt(r.totalCierres)+'</b></td><td class="mono"><b>'+fmt(r.totalRecibido)+'</b></td><td class="mono"><b>'+fmt(r2(num(r.totalRecibido)-num(r.totalCierres)))+'</b></td><td></td></tr></tfoot></table></div>';
   var cnt=GV_DENOMS.map(function(dn){ var q=num((r.conteo||{})[dn[0]]); return q?kvRow(dn[2]+' × '+q,fmt(q*dn[1])):''; }).join('');
