@@ -71,7 +71,8 @@
   .hhMeta b{color:var(--ink2); font-weight:700}
   .hhR{position:relative; overflow:hidden; display:flex; align-items:flex-end; justify-content:center;
     background:linear-gradient(158deg,#edf7f0,#cfe8d6)}
-  .hhStatue{width:100%; max-width:470px; height:auto; object-fit:contain; mix-blend-mode:multiply; align-self:flex-end; display:block}
+  .hhStatue{width:100%; max-width:470px; height:auto; object-fit:contain; mix-blend-mode:multiply; align-self:flex-end; display:block; transition:opacity .7s ease}
+  .hhStatue.fade{opacity:0}
   .homeHero .homefoot{position:absolute; left:0; right:0; bottom:12px; z-index:2}
   .homefoot{text-align:center; color:var(--muted); font-size:12px; margin:22px 0 4px; letter-spacing:.3px}
   .homefoot span{opacity:.75}
@@ -656,7 +657,7 @@
           </div>
           <div class="hhR">
             <svg class="relN" viewBox="0 0 546 728" aria-hidden="true"><path d="M0 427 L0 728 L136 728 L136 634 Z M410 0 L410 85 L546 292 L546 0 Z M0 0 L148 0 L410 458.5 L410 341 L546 548 L546 728 L401.71 728 L136 263 L136 379 L0 172 Z"/></svg>
-            <img class="hhStatue" src="assets/nummeros/clasicos/euclides-lentes.jpg?v=44" alt="" loading="lazy">
+            <img class="hhStatue" id="homeStatue" src="assets/nummeros/clasicos/euclides-lentes.jpg?v=44" alt="">
           </div>
         </div>
         <div class="homefoot">NUMMEROS <span>by</span> CONTAX · GrupoVelasco SRL · Versión <span id="homeVer">—</span></div>
@@ -931,7 +932,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v57';
+var APP_VERSION = 'v58';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -3082,7 +3083,19 @@ function renderHome(){
     m.innerHTML='Cliente: <b>GrupoVelasco SRL</b> · Control y verificación por CONTAX.<br>'+fecha+(rango?(' · Semana en curso: <b>'+rango+'</b>'):'');
   }
   renderHomeQuick();
+  homeImgStart();
 }
+/* Inicio: la estatua va cambiando (una al azar al entrar y otra cada 12 s mientras se ve el Inicio) */
+var HOME_IMGS=['euclides-lentes','pitagoras-tablet','arquimedes-pensando','euclides-laptop','pitagoras-inventario','arquimedes-balanza','euclides-caminando','pitagoras-celular','pitagoras-senalando'], homeImgI=-1, homeImgT=null;
+function homeImgSig(primera){
+  var im=document.getElementById('homeStatue'); if(!im) return;
+  var sc=document.getElementById('scrHome'); if(!primera && (document.hidden || !sc || !sc.classList.contains('on'))) return;
+  var n=homeImgI; while(n===homeImgI) n=Math.floor(Math.random()*HOME_IMGS.length); homeImgI=n;
+  var src='assets/nummeros/clasicos/'+HOME_IMGS[n]+'.jpg?v=57', pre=new Image();
+  pre.onload=function(){ if(primera){ im.src=src; return; } im.classList.add('fade'); setTimeout(function(){ im.src=src; im.classList.remove('fade'); },700); };
+  pre.src=src;
+}
+function homeImgStart(){ if(homeImgT) return; homeImgSig(true); homeImgT=setInterval(function(){ homeImgSig(false); },12000); }
 /* Inicio: lo de esta semana, los últimos arqueos y atajos a lo que más se usa */
 function renderHomeQuick(){
   var q=document.getElementById('homeQuick'); if(!q || !session) return;
