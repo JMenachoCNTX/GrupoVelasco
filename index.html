@@ -417,6 +417,17 @@
   .drow.head{border-bottom:1px solid var(--line); padding-bottom:6px}
   .drow.head span{font-size:10.5px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.3px; text-align:center}
   .drow .day{font-size:12px; font-weight:600}
+  .gpp{display:flex; gap:5px; align-items:center}
+  .gpp .ain{flex:1; min-width:0}
+  .dbtns{display:flex; gap:3px; margin-top:3px}
+  .dferb,.dnotb{border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:6px; font-size:10px; font-weight:700; padding:1px 5px; cursor:pointer; line-height:1.4}
+  .dferb.on{background:#fdf0d8; color:var(--amber); border-color:var(--amber)}
+  .dnotb.on{background:var(--chip); color:var(--accent); border-color:var(--accent)}
+  .dferb:disabled,.dnotb:disabled{opacity:.5; cursor:default}
+  .drow.fer .dtot{color:var(--amber)}
+  .dferl{font-size:10.5px; font-weight:700; color:var(--amber); margin:-3px 0 4px 2px}
+  .dnote{margin:-2px 0 7px}
+  .dnote .fld{width:100%; font-size:12px; padding:6px 8px}
   .drow .day small{display:block; color:var(--muted); font-weight:500; font-size:10.5px}
   .cellin{width:100%; padding:8px 6px; border:1px solid var(--line); border-radius:9px;
     text-align:center; background:var(--field)}
@@ -857,7 +868,7 @@
       </div>
 
       <div class="panel">
-        <div class="note">Sistema desarrollado para CONTAX · Moneda: Bolivianos (Bs). Los pagos se registran por día; el saldo de la semana se paga (aprox.) el jueves siguiente. · Versión <span id="verLabel">—</span></div>
+        <div class="note">Sistema desarrollado para CONTAX · Moneda: Bolivianos (Bs). Los pagos se registran por día; el saldo de la semana se paga con el dinero en efectivo del pago semanal. · Versión <span id="verLabel">—</span></div>
       </div>
     </section>
 
@@ -935,7 +946,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v62';
+var APP_VERSION = 'v63';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -1006,7 +1017,7 @@ function maybeShowReminder(){
   var prevMon=addDays(mondayOf(hoy),-7), sun=addDays(prevMon,6);
   var rango=prevMon.getDate()+'/'+(prevMon.getMonth()+1)+' al '+sun.getDate()+'/'+(sun.getMonth()+1);
   var h='<h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg> Recordatorio importante</h3>';
-  h+='<div class="body">Por favor <b>completa las horas de la semana pasada</b> ('+rango+') <b>antes de que termine hoy</b>.<br><br>El pago del <b>jueves</b> se realiza según lo que esté registrado en el sistema. Si falta información, el pago podría salir <b>incompleto</b>.</div>';
+  h+='<div class="body">Por favor <b>completa las horas de la semana pasada</b> ('+rango+') <b>antes de que termine hoy</b>.<br><br>El <b>pago semanal</b> se realiza según lo que esté registrado en el sistema. Si falta información, el pago podría salir <b>incompleto</b>.</div>';
   h+='<div class="acts"><button class="mini" onclick="dismissReminder()">Entendido</button><button class="mini acc" onclick="gotoPrevWeek()">Ir a esa semana</button></div>';
   openModal(h);
 }
@@ -1362,13 +1373,13 @@ function getEntry(wk, empId, create){
   }
   return DB.weeks[wk][empId];
 }
+/* Ganado de un día: feriado = todo el día se paga doble (horas y extras). */
+function dayGan(c,r,re){ c=c||{}; return (num(c.h)*r+num(c.e)*re)*(c.fer?2:1)-num(c.x); }
 function calc(entry, branch){
   var rr=entryRates(entry, branch);
   var r = rr.r, re = rr.re;
-  var hrs=0,ext=0,desc=0,dayPay=0;
-  (entry.d||[]).forEach(function(c){ hrs+=num(c.h); ext+=num(c.e); desc+=num(c.x); dayPay+=num(c.pm); });
-  var impH=hrs*r, impE=ext*re;
-  var ganado=impH+impE-desc;
+  var hrs=0,ext=0,desc=0,dayPay=0,ganado=0;
+  (entry.d||[]).forEach(function(c){ hrs+=num(c.h); ext+=num(c.e); desc+=num(c.x); dayPay+=num(c.pm); ganado+=dayGan(c,r,re); });
   var pagado=dayPay+(entry.p||[]).reduce(function(s,p){return s+num(p.m)},0);
   var saldo=ganado-pagado;
   var estado;
@@ -1509,19 +1520,23 @@ function empBodyHTML(id, entry, c, wk){
   for(var i=0;i<7;i++){
     var cell=ent.d[i]||{};
     var dh=num(cell.h), de=num(cell.e), dx=num(cell.x);
-    var dtot=dh*r+de*re-dx;
+    var dtot=dayGan(cell,r,re);
     var date=addDays(curMonday,i);
     var dgi=dtot;
     var full = num(cell.pm)>0 && cell.pf && num(cell.pm)>=dgi-0.009 && dgi>0.009;
     var libre = dh===0&&de===0&&dx===0;
     var dis = (roleRO || (!admin && full)) ? ' disabled' : '';
-    h+='<div class="drow'+(libre?' libre':'')+'">';
-    h+='<div class="day"'+(cell.por?' title="Cargado por '+esc(cell.por)+'"':'')+'>'+DAYS[i]+'<small>'+date.getDate()+'/'+(date.getMonth()+1)+(full?' ✓':'')+'</small></div>';
+    h+='<div class="drow'+(libre?' libre':'')+(cell.fer?' fer':'')+'">';
+    h+='<div class="day"'+(cell.por?' title="Cargado por '+esc(cell.por)+'"':'')+'>'+DAYS[i]+'<small>'+date.getDate()+'/'+(date.getMonth()+1)+(full?' ✓':'')+'</small>'
+      +'<span class="dbtns"><button type="button" class="dferb'+(cell.fer?' on':'')+'"'+dis+' onclick="setFer(\''+id+'\','+i+')" title="Feriado: ese día se paga doble">×2</button>'
+      +'<button type="button" class="dnotb'+(cell.n?' on':'')+'"'+(roleRO?' disabled':'')+' onclick="togNota(\''+id+'\','+i+')" title="Nota del día">✎</button></span></div>';
     h+='<input class="cellin mono" inputmode="decimal"'+dis+' value="'+(dh?trim(dh):'')+'" placeholder="0" oninput="setCell(\''+id+'\','+i+',\'h\',this.value)">';
     h+='<input class="cellin mono" inputmode="decimal"'+dis+' value="'+(de?trim(de):'')+'" placeholder="0" oninput="setCell(\''+id+'\','+i+',\'e\',this.value)">';
     h+='<input class="cellin mono" inputmode="decimal"'+dis+' value="'+(dx?trim(dx):'')+'" placeholder="0" oninput="setCell(\''+id+'\','+i+',\'x\',this.value)">';
     h+='<div class="dtot mono">'+(dtot?fmt(dtot):'–')+'</div>';
     h+='</div>';
+    if(cell.fer) h+='<div class="dferl">FERIADO · se paga doble</div>';
+    if(cell.n || openNota[id+'_'+i]) h+='<div class="dnote"><input class="fld" id="nota_'+id+'_'+i+'" value="'+esc(cell.n||'')+'" placeholder="Nota del día (ej.: llegó tarde, cambio de turno)"'+(roleRO?' disabled':'')+' onchange="setNota(\''+id+'\','+i+',this.value)"></div>';
   }
   h+='<div class="subtot">';
   h+='<div class="box"><div class="k">Ganado</div><div class="v mono">'+cuad(bs(c.ganado))+'</div></div>';
@@ -1539,12 +1554,12 @@ function empBodyHTML(id, entry, c, wk){
   }
 
   // ---- Pagos por día ----
-  h+='<div class="paysec"><div class="note" style="margin-bottom:8px">Los pagos de aquí se hacen con el <b>efectivo que se envía cada jueves</b>. Los pagos hechos con el dinero de la caja se registran desde el arqueo (tipo de gasto PAGO AL PERSONAL).</div><h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg> Pagos por día</h4>';
+  h+='<div class="paysec"><div class="note" style="margin-bottom:8px">Los pagos de aquí se hacen con el <b>dinero en efectivo del pago semanal</b>. Los pagos hechos con el dinero de la caja se registran desde el arqueo (tipo de gasto PAGO AL PERSONAL, eligiendo los días).</div><h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg> Pagos por día</h4>';
   var anyWorked=false, anyUnpaid=false;
   for(var i=0;i<7;i++){
     var cell=ent.d[i]||{};
     var dh=num(cell.h), de=num(cell.e), dx=num(cell.x);
-    var dg=dh*r+de*re-dx;
+    var dg=dayGan(cell,r,re);
     var paid=num(cell.pm);
     if(dg<=0.009 && !(paid>0)) continue;
     anyWorked=true;
@@ -1562,7 +1577,7 @@ function empBodyHTML(id, entry, c, wk){
       if(partial) h+='<span class="paidchip" style="background:#fdf0d8;color:var(--amber)">Pagado '+bs(paid)+'</span>';
       h+='<input class="fld mono paym" id="pm_'+id+'_'+i+'" inputmode="decimal" placeholder="Importe" value="'+(rem>0.009?trim(rem):'')+'">';
       h+='<input class="fld payf" type="date" id="pf_'+id+'_'+i+'" value="'+today()+'">';
-      h+='<button class="mini acc" onclick="payDay(\''+id+'\','+i+',this)" title="Pago con el efectivo que se envía cada jueves">'+(partial?'Pagar diferencia':'Pagar')+'</button>';
+      h+='<button class="mini acc" onclick="payDay(\''+id+'\','+i+',this)" title="Pago con el dinero en efectivo del pago semanal">'+(partial?'Pagar diferencia':'Pagar')+'</button>';
       if(admin && partial) h+='<button class="mini" onclick="unpayDay(\''+id+'\','+i+')">Quitar</button>';
     } else {
       h+='<span class="tag">'+(partial?'Parcial':'Pendiente')+'</span>';
@@ -1582,7 +1597,7 @@ function empBodyHTML(id, entry, c, wk){
   h+='</div>';
   return h;
 }
-function dayGanadoOf(id,i){ var e=getEntry(weekKey(curMonday),id,false); var c=e.d[i]||{}; var rr=entryRates(e,empBranch(id)); return num(c.h)*rr.r+num(c.e)*rr.re-num(c.x); }
+function dayGanadoOf(id,i){ var e=getEntry(weekKey(curMonday),id,false); var c=e.d[i]||{}; var rr=entryRates(e,empBranch(id)); return dayGan(c,rr.r,rr.re); }
 function dayFullyPaid(id,i){ var e=getEntry(weekKey(curMonday),id,false); var c=e.d[i]||{}; if(!(num(c.pm)>0 && c.pf)) return false; return num(c.pm) >= dayGanadoOf(id,i)-0.009 && dayGanadoOf(id,i)>0.009; }
 function canEditDay(id,i){ if(isAdmin()) return true; if(!canEdit()) return false; return !dayFullyPaid(id,i); }
 function payDay(id,i,btn){
@@ -1615,7 +1630,7 @@ function payAllDays(id,btn){
   if(faltaDato(id)) return;
   var e=getEntry(weekKey(curMonday),id,true);
   var rr=entryRates(e,empBranch(id)), r=rr.r, re=rr.re, n=0;
-  for(var i=0;i<7;i++){ var c=e.d[i]||{h:0,e:0,x:0}; var dg=num(c.h)*r+num(c.e)*re-num(c.x); var rem=dg-num(c.pm); if(rem>0.009){ e.d[i]=c; c.pm=num(c.pm)+rem; c.pf=f; c.pmPor=operadorNombre(); n++; } }
+  for(var i=0;i<7;i++){ var c=e.d[i]||{h:0,e:0,x:0}; var dg=dayGan(c,r,re); var rem=dg-num(c.pm); if(rem>0.009){ e.d[i]=c; c.pm=num(c.pm)+rem; c.pf=f; c.pmPor=operadorNombre(); n++; } }
   if(!n){ toast('No hay días pendientes'); return; }
   btnBusy(btn,'Pagando…');
   withLoader('Guardando pagos…', function(){
@@ -1664,6 +1679,20 @@ function setCell(id, dayIdx, field, val){
   refreshCard(id);
   refreshStrip();
 }
+var openNota={};
+function setFer(id,i){
+  if(!canEditDay(id,i)) return; if(faltaDato(id)) return;
+  var e=getEntry(weekKey(curMonday),id,true), c=e.d[i]; c.fer=!c.fer; c.por=operadorNombre();
+  saveLocal(); rerenderCardBody(id); refreshCard(id); refreshStrip();
+  toast(c.fer?'Feriado: ese día se paga doble':'Ya no es feriado');
+}
+function togNota(id,i){ var k=id+'_'+i; openNota[k]=!openNota[k]; rerenderCardBody(id); var el=document.getElementById('nota_'+id+'_'+i); if(el) el.focus(); }
+function setNota(id,i,v){
+  if(!canEdit()) return;
+  var e=getEntry(weekKey(curMonday),id,true); v=String(v||'').trim();
+  if(v) e.d[i].n=v; else delete e.d[i].n;
+  e.d[i].nPor=operadorNombre(); saveLocal(); toast(v?'Nota guardada':'Nota borrada');
+}
 function refreshCard(id){
   var wk=weekKey(curMonday);
   var entry=getEntry(wk,id,false);
@@ -1679,7 +1708,7 @@ function refreshCard(id){
   var rows=card.querySelectorAll('.empbody .drow:not(.head)');
   rows.forEach(function(row,i){
     var cell=entry.d[i]||{};
-    var dtot=num(cell.h)*c.r+num(cell.e)*c.re-num(cell.x);
+    var dtot=dayGan(cell,c.r,c.re);
     var tt=row.querySelector('.dtot'); if(tt) tt.textContent=dtot?fmt(dtot):'–';
     row.classList.toggle('libre', num(cell.h)===0&&num(cell.e)===0&&num(cell.x)===0);
   });
@@ -1988,7 +2017,7 @@ function dayData(date){
       var e=DB.weeks[wk]&&DB.weeks[wk][id]; if(!e) return;
       var cell=(e.d||[])[dayIdx]||{}; var hh=num(cell.h),ex=num(cell.e),dx=num(cell.x);
       var rr=entryRates(e,bid), r=rr.r, re=rr.re;
-      if(hh||ex||dx){ var imp=hh*r+ex*re-dx; worked.push({b:bid,name:DB.employees[id].name,h:hh,ex:ex,imp:imp}); totH+=hh; totImp+=imp; }
+      if(hh||ex||dx){ var imp=dayGan(cell,r,re); worked.push({b:bid,name:DB.employees[id].name,h:hh,ex:ex,imp:imp,fer:cell.fer,n:cell.n}); totH+=hh; totImp+=imp; }
     });
   });
   Object.keys(DB.weeks).forEach(function(w){
@@ -2008,7 +2037,7 @@ function dayDetailPanelHTML(date){
   var h='<div class="panel"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg> '+lbl+'</h3>';
   h+='<div class="strip" style="margin-bottom:8px">'+statHTML('Horas',trim(D.totH)+' h','g')+statHTML('Importe',bs(D.totImp),'p')+statHTML('Pagado',bs(D.totPay),'s')+'</div>';
   h+='<div class="note" style="font-weight:700;color:var(--ink2);margin:10px 0 4px">Trabajaron ('+D.worked.length+')</div>';
-  if(D.worked.length){ D.worked.forEach(function(w){ h+='<div class="row"><div class="grow"><b>'+esc(w.name)+'</b>'+(showBr?' <span class="tag">'+branchName(w.b)+'</span>':'')+'<br><span class="tag">'+trim(w.h)+' h'+(w.ex?' · '+trim(w.ex)+' extra':'')+'</span></div><div class="mono">'+bs(w.imp)+'</div></div>'; }); }
+  if(D.worked.length){ D.worked.forEach(function(w){ h+='<div class="row"><div class="grow"><b>'+esc(w.name)+'</b>'+(showBr?' <span class="tag">'+branchName(w.b)+'</span>':'')+'<br><span class="tag">'+trim(w.h)+' h'+(w.ex?' · '+trim(w.ex)+' extra':'')+(w.fer?' · FERIADO ×2':'')+'</span>'+(w.n?'<br><span class="note">'+esc(w.n)+'</span>':'')+'</div><div class="mono">'+bs(w.imp)+'</div></div>'; }); }
   else h+='<div class="note">Nadie registró horas este día.</div>';
   h+='<div class="note" style="font-weight:700;color:var(--ink2);margin:14px 0 4px">Pagos del día</div>';
   if(D.pays.length){ D.pays.forEach(function(p){ h+='<div class="row"><div class="grow"><b>'+esc(p.name)+'</b>'+(showBr?' <span class="tag">'+branchName(p.b)+'</span>':'')+(p.n?'<br><span class="tag">'+esc(p.n)+'</span>':'')+'</div><div class="mono pos">'+bs(p.m)+'</div></div>'; }); }
@@ -2209,7 +2238,7 @@ function receiptDiv(id, i){
   var wk=weekKey(curMonday), e=getEntry(wk,id,false), cell=(e.d||[])[i]||{};
   var bid=empBranch(id), rates=DB.config.rates[bid]||{r:15,re:15};
   var rr=entryRates(e,bid), r=rr.r, re=rr.re;
-  var dh=num(cell.h), de=num(cell.e), dx=num(cell.x), imp=dh*r+de*re-dx;
+  var dh=num(cell.h), de=num(cell.e), dx=num(cell.x), imp=dayGan(cell,r,re);
   var date=addDays(curMonday,i);
   var blogo = LOGOS[bid] ? '<img class="rblogo" src="'+LOGOS[bid]+'">' : '';
   var h='<div class="receipt">';
@@ -2219,6 +2248,8 @@ function receiptDiv(id, i){
   h+='<tr><td>Sucursal</td><td>'+branchName(bid)+'</td></tr>';
   h+='<tr><td>Día trabajado</td><td>'+DAYS_L[i]+' '+fullDate(isoLocal(date))+'</td></tr>';
   h+='<tr><td>Horas</td><td>'+trim(dh)+' h'+(de?' + '+trim(de)+' extra':'')+(dx?' · desc. '+bs(dx):'')+'</td></tr>';
+  if(cell.fer) h+='<tr><td>Feriado</td><td>Sí · pago doble</td></tr>';
+  if(cell.n) h+='<tr><td>Nota</td><td>'+esc(cell.n)+'</td></tr>';
   h+='<tr><td>Importe del día</td><td>'+bs(imp)+'</td></tr>';
   h+='<tr class="rtot"><td>Monto pagado</td><td>'+bs(cell.pm)+'</td></tr>';
   h+='<tr><td>Fecha de pago</td><td>'+fullDate(cell.pf)+'</td></tr>';
@@ -2432,7 +2463,7 @@ function computeReportWeek(wk,branches){
       var rates=DB.config.rates[bid]||{r:15,re:15};
       var rr=entryRates(e,bid), r=rr.r, re=rr.re;
       (e.d||[]).forEach(function(cell,i){
-        dayG[i]+= num(cell.h)*r + num(cell.e)*re - num(cell.x);
+        dayG[i]+= dayGan(cell,r,re);
         dayP[i]+= num(cell.pm);
       });
     });
@@ -2734,16 +2765,27 @@ function empPorNombre(suc,n){ var k=normName(n||''); return empleadosSuc(suc).fi
 function registrarPagosCaja(doc){
   var wk=weekKey(mondayOf(parseISO(doc.fecha))), n=0;
   // quita lo que este mismo arqueo hubiera registrado antes (si se volvió a guardar)
-  Object.keys(DB.weeks[wk]||{}).forEach(function(id){ var en=DB.weeks[wk][id]; if(en&&en.p) en.p=en.p.filter(function(p){ return p.arq!==doc.id; }); });
+  Object.keys(DB.weeks||{}).forEach(function(w){ Object.keys(DB.weeks[w]||{}).forEach(function(id){ var en=DB.weeks[w][id]; if(!en) return;
+    if(en.p) en.p=en.p.filter(function(p){ return p.arq!==doc.id; });
+    (en.d||[]).forEach(function(c){ if(c&&c.cj&&c.cj[doc.id]!=null){ c.pm=r2(num(c.pm)-num(c.cj[doc.id])); delete c.cj[doc.id]; if(!Object.keys(c.cj).length) delete c.cj;
+      if(c.pm<=0.009){ delete c.pm; delete c.pf; delete c.pmPor; } if(c.arq===doc.id){ delete c.origen; delete c.arq; } } }); }); });
   (doc.gastos||[]).forEach(function(g){
     if(String(g.tipo||'').toUpperCase()!==TIPO_PAGO_PERSONAL || !num(g.t)) return;
     var e=empPorNombre(doc.suc,g.g); if(!e) return;
-    var en=getEntry(wk,e._id,true); en.p=en.p||[];
-    en.p.push({f:doc.fecha, m:num(g.t), n:'PAGO DE CAJA · ARQUEO NRO '+doc.nro, por:doc.hechoPor||'', origen:'caja', arq:doc.id}); n++;
+    var resto=num(g.t);
+    // días elegidos: quedan pagados con el dinero de la caja
+    (g.dias||[]).forEach(function(x){ var m=Math.min(num(x.m),resto); if(m<=0) return;
+      var en=getEntry(x.wk,e._id,true), c=en.d[x.i]=en.d[x.i]||{h:0,e:0,x:0};
+      c.pm=r2(num(c.pm)+m); c.pf=doc.fecha; c.pmPor=doc.hechoPor||''; c.origen='caja'; c.arq=doc.id;
+      c.cj=c.cj||{}; c.cj[doc.id]=r2(num(c.cj[doc.id])+m); resto=r2(resto-m); n++; });
+    // lo que no va a un día (adelanto) se suma como pago de la semana
+    if(resto>0.009){ var en2=getEntry(wk,e._id,true); en2.p=en2.p||[];
+      en2.p.push({f:doc.fecha, m:resto, n:'PAGO DE CAJA · ARQUEO NRO '+doc.nro, por:doc.hechoPor||'', origen:'caja', arq:doc.id}); n++; }
   });
-  if(n){ saveLocal(); toast(n+' pago(s) al personal sumados a la semana'); }
+  if(n){ saveLocal(); toast('Pagos al personal registrados ('+n+')'); }
 }
-function origenPagoHTML(p){ return p&&p.origen==='caja' ? '<span class="tag" style="background:#e2f1ea;color:#1d6b40">DE CAJA'+(p.arq?' · ARQUEO '+esc(String(p.arq).split('_').pop()):'')+'</span>' : '<span class="tag">EFECTIVO DEL JUEVES</span>'; }
+function pmCaja(c){ var t=0; if(c&&c.cj) Object.keys(c.cj).forEach(function(k){ t+=num(c.cj[k]); }); return t; }
+function origenPagoHTML(p){ return p&&p.origen==='caja' ? '<span class="tag" style="background:#e2f1ea;color:#1d6b40">DE CAJA'+(p.arq?' · ARQUEO '+esc(String(p.arq).split('_').pop()):'')+'</span>' : '<span class="tag">DINERO EN EFECTIVO DEL PAGO SEMANAL</span>'; }
 /* ---- Cargos del personal (iguales en todas las sucursales) ---- */
 var CARGOS_BASE=['CAJERO','COCINERO','AYUDANTE DE COCINA','MESERO','DELIVERY','LIMPIEZA','ENCARGADO','ADMINISTRACIÓN'];
 function getCargos(){
@@ -3186,10 +3228,10 @@ async function renDatos(){
   return {arqs:arqs, rens:rens, pend:pend};
 }
 function renPagosSemana(fecha){
-  // pagos al personal de la semana de la rendición que NO salieron de la caja (el "efectivo del jueves")
+  // pagos al personal de la semana de la rendición que NO salieron de la caja (el dinero en efectivo del pago semanal)
   var wk=weekKey(mondayOf(parseISO(fecha))), t=0;
   Object.keys(DB.weeks[wk]||{}).forEach(function(id){ var en=DB.weeks[wk][id]; if(!en) return;
-    (en.d||[]).forEach(function(c){ t+=num(c.pm); });
+    (en.d||[]).forEach(function(c){ t+=num(c.pm)-pmCaja(c); });
     (en.p||[]).forEach(function(p){ if(p.origen!=='caja') t+=num(p.m); }); });
   return {wk:wk, total:r2(t)};
 }
@@ -3614,7 +3656,10 @@ function arqFilaEstado(r){
 function gasRowHTML(g,i){
   var doc='<select class="ain" data-f="g" data-r="'+i+'" data-c="doc"'+(arqRO?' disabled':'')+'><option value="">—</option>'+['RECIBO','FACTURA'].map(function(x){return '<option'+(String(g.doc||'').toUpperCase()===x?' selected':'')+'>'+x+'</option>';}).join('')+'</select>';
   var pp=String(g.tipo||'').toUpperCase()===TIPO_PAGO_PERSONAL;
-  return '<tr data-grow="'+i+'"><td class="anro">'+(i+1)+'</td><td>'+aIn('g',i,'g',g.g,{ph:arqRO?'':(pp?'Elige a la persona':'Descripción del gasto'),list:pp?'gvEmpList':''})+'</td><td>'+aIn('g',i,'t',g.t||'',{num:1,cls:'n'})+'</td><td>'+doc+'</td><td>'+aIn('g',i,'docnro',g.docnro)+'</td><td>'+aIn('g',i,'tipo',g.tipo,{list:'gvTiposGasto',ph:arqRO?'':'Tipo'})+'</td></tr>';
+  var nd=(g.dias||[]).length, gin=aIn('g',i,'g',g.g,{ph:arqRO?'':(pp?'Elige a la persona':'Descripción del gasto'),list:pp?'gvEmpList':''});
+  if(pp && !arqRO) gin='<div class="gpp">'+gin+'<button type="button" class="mini'+(nd?'':' acc')+'" onclick="arqPagoModal('+i+')" title="Elegir qué días se le pagan">'+(nd?nd+' día'+(nd>1?'s':''):'Elegir días')+'</button></div>';
+  else if(pp && nd) gin+='<div class="note">'+(g.dias||[]).map(function(x){ return fmtDate(isoLocal(addDays(parseISO(x.wk),x.i))); }).join(', ')+'</div>';
+  return '<tr data-grow="'+i+'"><td class="anro">'+(i+1)+'</td><td>'+gin+'</td><td>'+aIn('g',i,'t',g.t||'',{num:1,cls:'n'})+'</td><td>'+doc+'</td><td>'+aIn('g',i,'docnro',g.docnro)+'</td><td>'+aIn('g',i,'tipo',g.tipo,{list:'gvTiposGasto',ph:arqRO?'':'Tipo'})+'</td></tr>';
 }
 function aField(label,inner){ return '<div class="afr"><label>'+label+'</label>'+inner+'</div>'; }
 var ARQ_CHEV='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M6 9l6 6 6-6"/></svg>';
@@ -3672,7 +3717,7 @@ function arqSheetHTML(d){
   var gl=ro?d.gastos.filter(function(g){return g.g||num(g.t);}):d.gastos;
   if(ro && !gl.length) h+='<tr><td colspan="6" class="note" style="text-align:center;padding:14px">Sin gastos.</td></tr>';
   gl.forEach(function(g,i){ h+=gasRowHTML(g,i); });
-  h+='</tbody></table></div><datalist id="gvTiposGasto">'+GV_TIPOS_GASTO.map(function(x){return '<option value="'+esc(x)+'">';}).join('')+'</datalist><datalist id="gvEmpList">'+(ro?'':empleadosSuc(d.suc).map(function(e){return '<option value="'+esc(empName(e))+'">';}).join(''))+'</datalist>'+(ro?'':'<div class="note" style="margin-top:8px">Si le pagaste a alguien del personal con el dinero de la caja, elige el tipo <b>PAGO AL PERSONAL</b> y escribe su nombre: al guardar el arqueo se suma solo a sus pagos de la semana.</div>')+'</div>';
+  h+='</tbody></table></div><datalist id="gvTiposGasto">'+GV_TIPOS_GASTO.map(function(x){return '<option value="'+esc(x)+'">';}).join('')+'</datalist><datalist id="gvEmpList">'+(ro?'':empleadosSuc(d.suc).map(function(e){return '<option value="'+esc(empName(e))+'">';}).join(''))+'</datalist>'+(ro?'':'<div class="note" style="margin-top:8px">Si le pagaste a alguien del personal con el dinero de la caja, elige el tipo <b>PAGO AL PERSONAL</b>: el sistema te pide el nombre y te muestra sus días pendientes para que marques cuáles le pagas. Al guardar el arqueo esos días quedan pagados.</div>')+'</div>';
   // --- 3 bloques
   h+='<div class="a3">';
   h+='<div class="acard" id="cardRep"><h3>Reporte de ventas<span class="sp"></span>'+colBtn('cardRep')+'</h3><div id="aRep"></div></div>';
@@ -3808,7 +3853,10 @@ function arqOnInput(e){
   } else if(f==='om'){ draft.ordenes[r].m=v; arqPintarMarca(r); }
   else if(f==='on'){ draft.ordenes[r].n=v; arqCrecer(); }
   else if(f==='py'){ var pk=el.getAttribute('data-k'); draft.peya=draft.peya||{}; var px=draft.peya[pk]=draft.peya[pk]||{}; if(num(v)) px[c]=v; else delete px[c]; }
-  else if(f==='g'){ draft.gastos[r][c]=v; arqCrecerG();
+  else if(f==='g'){ var gw=draft.gastos[r], eraPP=String(gw.tipo||'').toUpperCase()===TIPO_PAGO_PERSONAL; gw[c]=v; arqCrecerG();
+    if(c==='g' && gw.dias && normName(v)!==normName(gw.dEmp||'')){ delete gw.dias; delete gw.dEmp; arqGasRow(r); toast('Cambiaste el nombre: vuelve a elegir los días a pagar'); }
+    if(c==='t' && gw.dias){ delete gw.dias; delete gw.dEmp; arqGasRow(r,1); toast('Cambiaste el monto a mano: el pago queda sin días (como adelanto)'); }
+    if(c==='tipo' && eraPP!==(String(v).toUpperCase()===TIPO_PAGO_PERSONAL)){ if(!eraPP){ arqGasRow(r); guardarBorrador(); arqPagoModal(r); return; } delete gw.dias; delete gw.dEmp; arqGasRow(r,1); }
     if(c==='tipo'){ var pp=String(v).toUpperCase()===TIPO_PAGO_PERSONAL, gi=document.querySelector('#asheet [data-f="g"][data-r="'+r+'"][data-c="g"]'); if(gi){ if(pp){ gi.setAttribute('list','gvEmpList'); gi.placeholder='Elige a la persona'; } else { gi.removeAttribute('list'); gi.placeholder='Descripción del gasto'; } } } }
   else if(f==='cn'){ draft.conteo=draft.conteo||{}; if(num(v)) draft.conteo[c]=num(v); else delete draft.conteo[c]; }
   else if(f==='d'){
@@ -3838,6 +3886,83 @@ function arqCrecer(){
 function arqCrecerG(){
   var before=draft.gastos.length; padRows(draft);
   if(draft.gastos.length>before){ var tb=document.getElementById('gasRows'), h=''; for(var i=before;i<draft.gastos.length;i++) h+=gasRowHTML(draft.gastos[i],i); tb.insertAdjacentHTML('beforeend',h); }
+}
+// redibuja una fila de gastos (keep=1: deja el foco donde está, solo cambia el botón)
+function arqGasRow(r,keep){
+  var tr=document.querySelector('#gasRows tr[data-grow="'+r+'"]'); if(!tr) return;
+  var act=document.activeElement, ac=act&&act.getAttribute&&act.getAttribute('data-c');
+  tr.outerHTML=gasRowHTML(draft.gastos[r],r);
+  if(keep&&ac){ var el=document.querySelector('#gasRows tr[data-grow="'+r+'"] [data-c="'+ac+'"]'); if(el){ el.focus(); try{ var L=el.value.length; el.setSelectionRange(L,L); }catch(e){} } }
+}
+/* ---- Pago al personal desde la caja: elegir persona y días pendientes ---- */
+// días con saldo de una persona hasta la fecha del arqueo (descuenta lo ya elegido en otras filas)
+function diasPendientes(empId, hasta, filaExcl){
+  var emp=DB.employees[empId]; if(!emp) return [];
+  var usados={};
+  (draft.gastos||[]).forEach(function(g,k){ if(k===filaExcl) return; (g.dias||[]).forEach(function(x){ if(x.emp===empId){ var kk=x.wk+'|'+x.i; usados[kk]=(usados[kk]||0)+num(x.m); } }); });
+  var out=[];
+  Object.keys(DB.weeks||{}).sort().forEach(function(wk){
+    var en=DB.weeks[wk][empId]; if(!en) return;
+    var rr=entryRates(en,emp.branch), extraP=(en.p||[]).reduce(function(a,p){ return a+num(p.m); },0);
+    for(var i=0;i<7;i++){
+      var c=(en.d||[])[i]||{}, ds=isoLocal(addDays(parseISO(wk),i));
+      var rem=dayGan(c,rr.r,rr.re)-num(c.pm); if(rem<=0.009) continue;
+      var cub=Math.min(extraP,rem); extraP-=cub; rem-=cub;          // pagos sueltos de la semana cubren primero los días más antiguos
+      rem-=(usados[wk+'|'+i]||0);
+      if(rem>0.009 && ds<=hasta) out.push({wk:wk,i:i,fecha:ds,rem:r2(rem),h:num(c.h),e:num(c.e),fer:!!c.fer,n:c.n||''});
+    }
+  });
+  return out;
+}
+var pagoSel=null;
+function arqPagoModal(r){
+  if(!draft||arqRO) return;
+  var g=draft.gastos[r], emps=empleadosSuc(draft.suc).slice().sort(function(a,b){ return empName(a)<empName(b)?-1:1; });
+  var cur=empPorNombre(draft.suc,g.g);
+  pagoSel={r:r, emp:cur?cur._id:'', sel:{}};
+  (g.dias||[]).forEach(function(x){ pagoSel.sel[x.wk+'|'+x.i]=num(x.m); });
+  var opts='<option value="">— Elige a la persona —</option>'+emps.map(function(e){ return '<option value="'+e._id+'"'+(cur&&cur._id===e._id?' selected':'')+'>'+esc(empName(e))+'</option>'; }).join('');
+  openModal('<h3 style="margin:0 0 8px">Pago al personal desde la caja</h3>'
+    +'<div class="note" style="margin-bottom:10px">Elige a quién le pagas y marca los días que le estás pagando. Solo se muestran los días que todavía tiene pendientes.</div>'
+    +'<select class="fld nomay" id="ppEmp" style="width:100%;margin-bottom:10px" onchange="pagoSel.emp=this.value;pagoSel.sel={};pagoLista()">'+opts+'</select>'
+    +'<div id="ppLista"></div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px"><button class="mini" onclick="pagoSinDias()">Es un adelanto (sin días)</button><button class="mini" onclick="closeModal()">Cancelar</button><button class="mini acc" onclick="pagoUsar()">Pagar los días marcados</button></div>', true);
+  pagoLista();
+}
+function pagoLista(){
+  var box=document.getElementById('ppLista'); if(!box||!pagoSel) return;
+  if(!pagoSel.emp){ box.innerHTML='<div class="empty">Elige a la persona para ver sus días pendientes.</div>'; return; }
+  var L=diasPendientes(pagoSel.emp, draft.fecha||today(), pagoSel.r);
+  if(!L.length){ box.innerHTML='<div class="empty">No tiene días pendientes de pago hasta el '+fullDate(draft.fecha)+'.<br>Si le das dinero igual, usa «Es un adelanto».</div>'; return; }
+  var h='<div style="max-height:52vh;overflow:auto"><table class="tbl"><thead><tr><th></th><th>Día</th><th>Trabajó</th><th class="r">Pendiente</th><th class="r">Pagar</th></tr></thead><tbody>';
+  L.forEach(function(x){ var k=x.wk+'|'+x.i, on=pagoSel.sel[k]!=null, d=parseISO(x.fecha);
+    h+='<tr><td><input type="checkbox" '+(on?'checked ':'')+'onchange="pagoMarca(\''+k+'\','+x.rem+',this.checked)"></td>'
+      +'<td><b>'+DAYS[(d.getDay()+6)%7]+' '+fmtDate(x.fecha)+'</b>'+(x.fer?' <span class="tag" style="background:#fdf0d8;color:var(--amber)">FERIADO ×2</span>':'')+(x.n?'<br><span class="note">'+esc(x.n)+'</span>':'')+'</td>'
+      +'<td>'+trim(x.h)+' h'+(x.e?' + '+trim(x.e)+' extra':'')+'</td><td class="r mono">'+bs(x.rem)+'</td>'
+      +'<td class="r"><input class="fld mono nomay" style="width:90px;text-align:right" inputmode="decimal" id="pp_'+k.replace('|','_')+'" value="'+(on?trim(pagoSel.sel[k]):'')+'" placeholder="'+trim(x.rem)+'" oninput="pagoMonto(\''+k+'\','+x.rem+',this.value)"'+(on?'':' disabled')+'></td></tr>'; });
+  var tot=0; Object.keys(pagoSel.sel).forEach(function(k){ tot+=num(pagoSel.sel[k]); });
+  h+='</tbody></table></div><div style="margin-top:8px;text-align:right">Total a pagar: <b id="ppTot" class="mono">'+bs(tot)+'</b> <button class="mini" onclick="pagoTodos()">Marcar todos</button></div>';
+  box.innerHTML=h;
+}
+function pagoTot(){ var t=0; Object.keys(pagoSel.sel).forEach(function(k){ t+=num(pagoSel.sel[k]); }); var el=document.getElementById('ppTot'); if(el) el.textContent=bs(t); return r2(t); }
+function pagoMarca(k,rem,on){ if(on) pagoSel.sel[k]=rem; else delete pagoSel.sel[k]; var inp=document.getElementById('pp_'+k.replace('|','_')); if(inp){ inp.disabled=!on; inp.value=on?trim(rem):''; } pagoTot(); }
+function pagoMonto(k,rem,v){ var m=num(v); if(m>rem){ m=rem; toast('No puede pasar de lo pendiente ('+bs(rem)+')'); var inp=document.getElementById('pp_'+k.replace('|','_')); if(inp) inp.value=trim(rem); } pagoSel.sel[k]=m; pagoTot(); }
+function pagoTodos(){ diasPendientes(pagoSel.emp, draft.fecha||today(), pagoSel.r).forEach(function(x){ pagoSel.sel[x.wk+'|'+x.i]=x.rem; }); pagoLista(); }
+function pagoUsar(){
+  if(!pagoSel||!pagoSel.emp){ toast('Elige a la persona'); return; }
+  var dias=Object.keys(pagoSel.sel).filter(function(k){ return num(pagoSel.sel[k])>0; }).sort().map(function(k){ var a=k.split('|'); return {wk:a[0], i:+a[1], m:r2(pagoSel.sel[k]), emp:pagoSel.emp}; });
+  if(!dias.length){ toast('Marca al menos un día (o usa «Es un adelanto»)'); return; }
+  var g=draft.gastos[pagoSel.r], e=DB.employees[pagoSel.emp];
+  g.g=empName(e); g.dEmp=g.g; g.dias=dias; g.t=String(pagoTot()); if(!g.doc) g.doc='RECIBO';
+  closeModal(); arqGasRow(pagoSel.r); guardarBorrador(); arqSched();
+  toast(dias.length+' día(s) elegidos · '+bs(num(g.t)));
+}
+function pagoSinDias(){
+  if(!pagoSel) return; var g=draft.gastos[pagoSel.r];
+  if(pagoSel.emp){ g.g=empName(DB.employees[pagoSel.emp]); }
+  delete g.dias; delete g.dEmp; if(!g.doc) g.doc='RECIBO';
+  closeModal(); arqGasRow(pagoSel.r); guardarBorrador();
+  toast('Escribe el monto del adelanto en la columna Total');
 }
 // Enter / flechas se mueven como en Excel dentro de las tablas
 function arqOnKey(e){
@@ -4201,7 +4326,8 @@ async function saveArqueo(btn){
   }
   // pago al personal: el nombre debe ser alguien del Personal de esa sucursal
   for(var pi=0; pi<draft.gastos.length; pi++){ var pg=draft.gastos[pi]; if(String(pg.tipo||'').toUpperCase()!==TIPO_PAGO_PERSONAL || !num(pg.t)) continue;
-    if(!empPorNombre(draft.suc,pg.g)){ toast('Gasto #'+(pi+1)+': "'+(pg.g||'')+'" no está en el Personal de esta sucursal. Elige el nombre de la lista.'); return; } }
+    if(!empPorNombre(draft.suc,pg.g)){ toast('Gasto #'+(pi+1)+': "'+(pg.g||'')+'" no está en el Personal de esta sucursal. Elige el nombre de la lista.'); return; }
+    if(pg.dias && Math.abs(pg.dias.reduce(function(a,x){ return a+num(x.m); },0)-num(pg.t))>0.01){ toast('Gasto #'+(pi+1)+': el total no coincide con los días elegidos. Vuelve a «Elegir días».'); return; } }
   // gastos: todas las columnas obligatorias
   for(var gi=0; gi<draft.gastos.length; gi++){ var gg=draft.gastos[gi];
     if(!(String(gg.g||'').trim()||num(gg.t)||gg.doc||String(gg.docnro||'').trim()||String(gg.tipo||'').trim())) continue;
@@ -4231,7 +4357,7 @@ async function saveArqueo(btn){
     comentarios:draft.comentarios||'', mes:(MONTHS[parseInt(draft.fecha.slice(5,7),10)-1]||'').toLowerCase(),
     ordenes:draft.ordenes.filter(ordUsada).map(function(o){ var a={}; for(var k in (o.a||{})){ if(num(o.a[k])) a[k]=num(o.a[k]); } var r={m:o.m,a:a}; if(o.n) r.n=o.n; if(o.mix) r.mx=1; return r; }),
     peya:(function(){ var o={}; Object.keys(draft.peya||{}).forEach(function(k){ var x=draft.peya[k], y={}; ['n','onl','efe','vou','promo'].forEach(function(f){ if(num(x[f])) y[f]=num(x[f]); }); if(Object.keys(y).length) o[k]=y; }); return o; })(),
-    gastos:draft.gastos.filter(function(g){return String(g.g||'').trim()||num(g.t)>0;}).map(function(g){ return {g:g.g,t:num(g.t),tipo:g.tipo||'',doc:g.doc||'',docnro:g.docnro||''}; }),
+    gastos:draft.gastos.filter(function(g){return String(g.g||'').trim()||num(g.t)>0;}).map(function(g){ var o={g:g.g,t:num(g.t),tipo:g.tipo||'',doc:g.doc||'',docnro:g.docnro||''}; if(g.dias&&g.dias.length&&String(g.tipo||'').toUpperCase()===TIPO_PAGO_PERSONAL) o.dias=g.dias.map(function(x){ return {wk:x.wk,i:x.i,m:num(x.m)}; }); return o; }),
     facDatos:draft.facDatos||null, facFoto:(draft._facFotoRef||null), posDatos:draft.posDatos||null, posFoto:(draft._posFotoRef||null),
     formato:3, estado:'capturado', creadoEn:Date.now(), creadoPor:(session?session.email:''), hechoPor:operadorNombre() };
   btnBusy(btn,'Guardando…');
@@ -4580,8 +4706,8 @@ function personalRango(r){
     shownBranches().forEach(function(bid){ allEmps(bid).forEach(function(id){
       var e=(DB.weeks[wk]||{})[id]; if(!e) return; var rr=entryRates(e,bid), o=out[bid];
       for(var i=0;i<7;i++){ var ds=isoLocal(addDays(mon,i)), c=(e.d||[])[i]||{};
-        if(ds>=d1 && ds<=d2){ o.h+=num(c.h); o.ex+=num(c.e); o.g+=num(c.h)*rr.r+num(c.e)*rr.re-num(c.x); }
-        if(num(c.pm)>0 && c.pf>=d1 && c.pf<=d2) o.pj+=num(c.pm); }
+        if(ds>=d1 && ds<=d2){ o.h+=num(c.h); o.ex+=num(c.e); o.g+=dayGan(c,rr.r,rr.re); }
+        if(num(c.pm)>0 && c.pf>=d1 && c.pf<=d2){ var cjm=pmCaja(c); o.pc+=cjm; o.pj+=num(c.pm)-cjm; } }
       (e.p||[]).forEach(function(p){ if(p.f>=d1 && p.f<=d2){ if(p.origen==='caja') o.pc+=num(p.m); else o.pj+=num(p.m); } });
     }); });
   });
@@ -4628,8 +4754,8 @@ function rgContenido(D,r){
   h+='</tbody></table>';
   sheets['Órdenes']=rows;
   // 5. personal
-  rows=[['Sucursal','Horas','Horas extra','Ganado','Pagado (efectivo del jueves)','Pagado (de caja)']];
-  h+='<h3 class="rgh3">5. Personal</h3><table class="tbl"><thead><tr><th>Sucursal</th><th class="r">Horas</th><th class="r">Extras</th><th class="r">Ganado</th><th class="r">Pagado (jueves)</th><th class="r">Pagado (de caja)</th></tr></thead><tbody>';
+  rows=[['Sucursal','Horas','Horas extra','Ganado','Pagado (pago semanal)','Pagado (de caja)']];
+  h+='<h3 class="rgh3">5. Personal</h3><table class="tbl"><thead><tr><th>Sucursal</th><th class="r">Horas</th><th class="r">Extras</th><th class="r">Ganado</th><th class="r">Pagado (pago semanal)</th><th class="r">Pagado (de caja)</th></tr></thead><tbody>';
   var TP={h:0,ex:0,g:0,pj:0,pc:0};
   Object.keys(P).forEach(function(b){ var o=P[b]; if(!(o.h||o.g||o.pj||o.pc)) return; for(var k in TP) TP[k]+=o[k]; rows.push([branchName(b),r2(o.h),r2(o.ex),r2(o.g),r2(o.pj),r2(o.pc)]);
     h+='<tr><td>'+esc(branchName(b))+'</td><td class="mono">'+trim(o.h)+'</td><td class="mono">'+trim(o.ex)+'</td><td class="mono">'+fmt(o.g)+'</td><td class="mono">'+fmt(o.pj)+'</td><td class="mono">'+fmt(o.pc)+'</td></tr>'; });
