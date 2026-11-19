@@ -952,7 +952,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v64';
+var APP_VERSION = 'v65';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -1063,6 +1063,15 @@ function bs(n){ return 'Bs '+fmt(n); }
 function fmt0(n){ n=Math.round(num(n)); if(Object.is(n,-0)) n=0; return n.toLocaleString('es-BO',{maximumFractionDigits:0}); }
 function bs0(n){ return 'Bs '+fmt0(n); }
 function diasTrab(e){ return (e.d||[]).filter(function(c){ return num(c&&c.h)+num(c&&c.e)>0; }).length; }
+// cuántos días distintos del calendario tuvieron trabajo (no la suma por persona)
+function diasConTrabajo(wks,branches){
+  var set={}, ok={}; branches.forEach(function(b){ ok[b]=true; });
+  wks.forEach(function(wk){ var W=DB.weeks[wk]||{}, mon=parseISO(wk);
+    Object.keys(W).forEach(function(id){ var emp=DB.employees[id]; if(!emp||!ok[emp.branch]) return;
+      (W[id].d||[]).forEach(function(c,i){ if(num(c&&c.h)+num(c&&c.e)>0) set[isoLocal(addDays(mon,i))]=1; }); }); });
+  return Object.keys(set).length;
+}
+var NOTA_JORN='<div class="note" style="margin:-4px 0 10px"><b>Días con trabajo</b> = días del calendario en que alguien trabajó. <b>Jornadas</b> = suma de los días que trabajó cada persona (ej.: 10 personas × 7 días = 70 jornadas).</div>';
 function cargoDe(id){ var e=DB.employees[id]; return e&&e.cargo?esc(e.cargo):'<span style="color:var(--muted)">—</span>'; }
 function pad(n){ return String(n).padStart(2,'0'); }
 function isoLocal(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
@@ -1961,8 +1970,8 @@ function monthViewHTML(M,branches,yy,mm){
   var out='';
   if(branches.length>1){
     out+='<div class="panel"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8"/><path d="M9 12h0M12 12h0M15 12h0M9 16h0M12 16h0M15 16h0"/></svg> Total general — '+MONTHS[mm]+' '+yy+'</h3>';
-    out+='<div class="strip" style="margin-bottom:12px">'+statHTML('Días trabajados',fmt0(M.GD),'g')+statHTML('Horas',fmt0(M.GH)+' h','g')+statHTML('Horas extra',fmt0(M.GE)+' h','g')+statHTML('Ganado',bs0(M.GG),'g')+statHTML('Pagado',bs0(M.GP),'p')+statHTML('Pendiente',bs0(M.GS),'s')+'</div>';
-    out+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Sucursal</th><th>Días</th><th>Horas</th><th>Extras</th><th>Ganado</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody>';
+    out+='<div class="strip" style="margin-bottom:12px">'+statHTML('Días con trabajo',fmt0(diasConTrabajo(M.wks,branches)),'g')+statHTML('Jornadas',fmt0(M.GD),'g')+statHTML('Horas',fmt0(M.GH)+' h','g')+statHTML('Horas extra',fmt0(M.GE)+' h','g')+statHTML('Ganado',bs0(M.GG),'g')+statHTML('Pagado',bs0(M.GP),'p')+statHTML('Pendiente',bs0(M.GS),'s')+'</div>'+NOTA_JORN;
+    out+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Sucursal</th><th>Jornadas</th><th>Horas</th><th>Extras</th><th>Ganado</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody>';
     branches.forEach(function(bid){ var b=M.perBranch[bid]; out+='<tr><td>'+branchName(bid)+'</td><td class="mono">'+fmt0(b.bD)+'</td><td class="mono">'+fmt0(b.bH)+'</td><td class="mono">'+fmt0(b.bE)+'</td><td class="mono">'+fmt0(b.bG)+'</td><td class="mono pos">'+fmt0(b.bP)+'</td><td class="mono '+(b.bS>0.009?'neg':'')+'">'+fmt0(b.bS)+'</td></tr>'; });
     out+='<tr class="tot"><td>Total</td><td class="mono">'+fmt0(M.GD)+'</td><td class="mono">'+fmt0(M.GH)+'</td><td class="mono">'+fmt0(M.GE)+'</td><td class="mono">'+fmt0(M.GG)+'</td><td class="mono pos">'+fmt0(M.GP)+'</td><td class="mono '+(M.GS>0.009?'neg':'')+'">'+fmt0(M.GS)+'</td></tr>';
     out+='</tbody></table></div></div>';
@@ -1992,15 +2001,15 @@ function weekViewHTML(M,branches,yy,mm,forPrint){
   }
   if(branches.length>1){
     out+='<div class="panel"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8"/><path d="M9 12h0M12 12h0M15 12h0M9 16h0M12 16h0M15 16h0"/></svg> Total general — semana '+wkLabel(sel)+'</h3>';
-    out+='<div class="strip" style="margin-bottom:12px">'+statHTML('Días trabajados',fmt0(wD),'g')+statHTML('Horas',fmt0(wH)+' h','g')+statHTML('Horas extra',fmt0(wE)+' h','g')+statHTML('Ganado',bs0(wG),'g')+statHTML('Pagado',bs0(wP),'p')+statHTML('Pendiente',bs0(wS),'s')+'</div>';
-    out+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Sucursal</th><th>Días</th><th>Horas</th><th>Extras</th><th>Ganado</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody>';
+    out+='<div class="strip" style="margin-bottom:12px">'+statHTML('Días con trabajo',fmt0(diasConTrabajo([sel],branches)),'g')+statHTML('Jornadas',fmt0(wD),'g')+statHTML('Horas',fmt0(wH)+' h','g')+statHTML('Horas extra',fmt0(wE)+' h','g')+statHTML('Ganado',bs0(wG),'g')+statHTML('Pagado',bs0(wP),'p')+statHTML('Pendiente',bs0(wS),'s')+'</div>'+NOTA_JORN;
+    out+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Sucursal</th><th>Jornadas</th><th>Horas</th><th>Extras</th><th>Ganado</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody>';
     branches.forEach(function(bid){ var w=M.perBranch[bid].perWeek[sel]||{g:0,p:0,s:0,d:0,h:0,ex:0};
       out+='<tr><td>'+branchName(bid)+'</td><td class="mono">'+fmt0(w.d)+'</td><td class="mono">'+fmt0(w.h)+'</td><td class="mono">'+fmt0(w.ex)+'</td><td class="mono">'+fmt0(w.g)+'</td><td class="mono pos">'+fmt0(w.p)+'</td><td class="mono '+(w.s>0.009?'neg':'')+'">'+fmt0(w.s)+'</td></tr>'; });
     out+='<tr class="tot"><td>Total</td><td class="mono">'+fmt0(wD)+'</td><td class="mono">'+fmt0(wH)+'</td><td class="mono">'+fmt0(wE)+'</td><td class="mono">'+fmt0(wG)+'</td><td class="mono pos">'+fmt0(wP)+'</td><td class="mono '+(wS>0.009?'neg':'')+'">'+fmt0(wS)+'</td></tr>';
     out+='</tbody></table></div></div>';
   } else {
     out+='<div class="panel"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8"/><path d="M9 12h0M12 12h0M15 12h0M9 16h0M12 16h0M15 16h0"/></svg> Total — semana '+wkLabel(sel)+'</h3>';
-    out+='<div class="strip">'+statHTML('Días trabajados',fmt0(wD),'g')+statHTML('Horas',fmt0(wH)+' h','g')+statHTML('Horas extra',fmt0(wE)+' h','g')+statHTML('Ganado',bs0(wG),'g')+statHTML('Pagado',bs0(wP),'p')+statHTML('Pendiente',bs0(wS),'s')+'</div></div>';
+    out+='<div class="strip">'+statHTML('Días con trabajo',fmt0(diasConTrabajo([sel],branches)),'g')+statHTML('Jornadas',fmt0(wD),'g')+statHTML('Horas',fmt0(wH)+' h','g')+statHTML('Horas extra',fmt0(wE)+' h','g')+statHTML('Ganado',bs0(wG),'g')+statHTML('Pagado',bs0(wP),'p')+statHTML('Pendiente',bs0(wS),'s')+'</div>'+NOTA_JORN+'</div>';
   }
   branches.forEach(function(bid){
     var wk=DB.weeks[sel]||{}, rows=[], bG=0,bP=0,bS=0,bD=0,bH=0,bE=0;
@@ -2195,7 +2204,7 @@ async function exportMonthExcelFor(yy,mm){
   showLoader('Generando Excel…'); var _xts=Date.now();
   var branches=monthBranches();
   var M=computeMonth(yy,mm,branches), wb=XLSX.utils.book_new(), R0=function(n){ return Math.round(num(n)); };
-  var rs=[['Resumen '+MONTHS[mm]+' '+yy],[],['Sucursal','Días trabajados','Horas','Horas extra','Ganado','Pagado','Pendiente']];
+  var rs=[['Resumen '+MONTHS[mm]+' '+yy],[],['Sucursal','Jornadas','Horas','Horas extra','Ganado','Pagado','Pendiente']];
   branches.forEach(function(bid){ var b=M.perBranch[bid]; rs.push([branchName(bid),b.bD,R0(b.bH),R0(b.bE),R0(b.bG),R0(b.bP),R0(b.bS)]); });
   rs.push(['TOTAL',M.GD,R0(M.GH),R0(M.GE),R0(M.GG),R0(M.GP),R0(M.GS)]);
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rs),'Resumen');
@@ -2353,7 +2362,7 @@ function exportMonthPDFFor(yy,mm){
     if(R.topEmp.length){ inner+='<div class="cap">Top trabajadores por horas</div><div class="chartbox">'+svgHBars(R.topEmp.map(function(e){return {label:e.name,value:e.horas,color:branchColor(e.branch)};}))+'</div>'; }
   }
   if(branches.length>1){
-    inner+='<div class="cap">Total general</div><table><thead><tr><th>Sucursal</th><th>Días</th><th>Horas</th><th>Extras</th><th>Ganado</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody>';
+    inner+='<div class="cap">Total general</div><table><thead><tr><th>Sucursal</th><th>Jornadas</th><th>Horas</th><th>Extras</th><th>Ganado</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody>';
     branches.forEach(function(bid){ var b=M.perBranch[bid]; inner+='<tr><td>'+branchName(bid)+'</td><td>'+fmt0(b.bD)+'</td><td>'+fmt0(b.bH)+'</td><td>'+fmt0(b.bE)+'</td><td>'+fmt0(b.bG)+'</td><td>'+fmt0(b.bP)+'</td><td>'+fmt0(b.bS)+'</td></tr>'; });
     inner+='<tr class="tot"><td>Total</td><td>'+fmt0(M.GD)+'</td><td>'+fmt0(M.GH)+'</td><td>'+fmt0(M.GE)+'</td><td>'+fmt0(M.GG)+'</td><td>'+fmt0(M.GP)+'</td><td>'+fmt0(M.GS)+'</td></tr></tbody></table>';
   }
