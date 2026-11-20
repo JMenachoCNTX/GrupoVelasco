@@ -952,7 +952,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v65';
+var APP_VERSION = 'v66';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -3551,8 +3551,13 @@ function peyaLineas(a){
 // ¿la marca vende por ese canal en esa sucursal?
 function colPermitida(d,mk,col){ var g=(GV_COLS.filter(function(c){return c[0]===col;})[0]||[])[2]; if(gvSuc(d.suc).canales.indexOf(g)<0) return false; return !mk || GV_MK[mk].canales.indexOf(g)>=0; }
 var GV_DENOMS=[['d200',200,'Bs 200'],['d100',100,'Bs 100'],['d50',50,'Bs 50'],['d20',20,'Bs 20'],['d10',10,'Bs 10'],['d5',5,'Bs 5'],['d2',2,'Bs 2'],['d1',1,'Bs 1'],['d050',0.5,'Bs 0,50'],['d020',0.2,'Bs 0,20'],['d010',0.1,'Bs 0,10']];
-var GV_TIPOS_GASTO=['PAGO AL PERSONAL','TRANSPORTE','INSUMOS','LIMPIEZA','MANTENIMIENTO','PERSONAL','SERVICIOS BÁSICOS','OTROS'];
+var GV_TIPOS_GASTO=['PAGO AL PERSONAL','REPOSICIÓN CAJA CHICA','TRANSPORTE','INSUMOS','LIMPIEZA','MANTENIMIENTO','PERSONAL','SERVICIOS BÁSICOS','OTROS'];
 var TIPO_PAGO_PERSONAL='PAGO AL PERSONAL';
+// caja chica: fondo fijo por sucursal (aparte de la caja de ventas). Sus gastos se anotan en su propio cuadro y NO afectan el arqueo.
+var CCH_FONDO=300;
+function cchFondo(suc){ var v=num((gvSuc(suc)||{}).fondoCaja); return v>0?v:CCH_FONDO; }
+function cchUsada(g){ return !!(String(g.g||'').trim()||num(g.t)||g.doc||String(g.docnro||'').trim()); }
+function cchCalc(d){ var ini=num(d.cajaChica), tot=r2((d.cch||[]).reduce(function(s,g){ return s+num(g.t); },0)); return {ini:ini,tot:tot,saldo:r2(ini-tot)}; }
 var arqMode='list', draft=null, arqRO=false, arqRaf=0;
 var ARQ_DRAFT_KEY='gvArqDraft';
 function r2(n){ return Math.round(num(n)*100)/100; }
@@ -3587,6 +3592,8 @@ function padRows(d){
   var want=Math.max(10, used); while(d.ordenes.length<want) d.ordenes.push({m:'',a:{},n:''});
   var gu=0; d.gastos.forEach(function(g,i){ if(g.g||num(g.t)) gu=i+1; });
   var gw=Math.max(12, gu+4); while(d.gastos.length<gw) d.gastos.push({g:'',t:'',doc:'',docnro:'',tipo:''});
+  d.cch=d.cch||[]; var cu=0; d.cch.forEach(function(g,i){ if(cchUsada(g)) cu=i+1; });
+  var cw=Math.max(5, cu+2); while(d.cch.length<cw) d.cch.push({g:'',t:'',doc:'',docnro:''});
 }
 function ordUsada(o){ if(o.n) return true; for(var k in (o.a||{})){ if(num(o.a[k])) return true; } return false; }
 function guardarBorrador(){ if(!draft||arqRO) return; try{ localStorage.setItem(ARQ_DRAFT_KEY, JSON.stringify(draft)); }catch(e){} }
@@ -3597,7 +3604,8 @@ async function newArqueo(){
   if(prev && prev.ordenes && prev.ordenes.some(ordUsada) && confirm('Tienes un arqueo sin guardar (Nro '+(prev.nro||'—')+' · '+gvSucName(prev.suc)+').\n\nAceptar = continuar ese arqueo\nCancelar = empezar uno nuevo')){
     draft=prev; showLoader('Preparando el arqueo…'); draft.nro=await nextNro(draft.suc); hideLoader();
   } else {
-    draft={suc:sucDefault(),fecha:fechaApertura(),nro:'',cajero:'',turnoIni:'',turnoFin:'',cajaChica:'',ventasGerente:'',ordenes:[],gastos:[],peya:{},conteo:{},comentarios:''};
+    draft={suc:sucDefault(),fecha:fechaApertura(),nro:'',cajero:'',turnoIni:'',turnoFin:'',cajaChica:'',ventasGerente:'',ordenes:[],gastos:[],cch:[],peya:{},conteo:{},comentarios:''};
+    draft.cajaChica=String(cchFondo(draft.suc));
     showLoader('Preparando el arqueo…'); await arqAutoDatos(draft,false); hideLoader();
   }
   arqMode='new'; arqRO=false; arqSel=null; padRows(draft);
@@ -3609,6 +3617,7 @@ function docToDraft(a){
   return {suc:a.suc,fecha:a.fecha,nro:a.nro,cajero:a.cajero||'',turnoIni:tt[0]||'',turnoFin:tt[1]||'',cajaChica:caja||'',ventasGerente:a.ventasGerente||'',
     ordenes:(a.ordenes||[]).map(function(o){ return {m:o.m||'',a:Object.assign({},o.a||{}),n:o.n||'',mix:!!o.mx}; }),
     gastos:(a.gastos||[]).map(function(g){ return {g:g.g||'',t:g.t||'',doc:g.doc||'',docnro:g.docnro||'',tipo:g.tipo||''}; }),
+    cch:(a.cajaChicaGastos||[]).map(function(g){ return {g:g.g||'',t:g.t||'',doc:g.doc||'',docnro:g.docnro||''}; }),
     peya:JSON.parse(JSON.stringify(a.peya||{})),
     conteo:c, comentarios:a.comentarios||'', facDatos:a.facDatos||null, posDatos:a.posDatos||null, _doc:a};
 }
@@ -3713,6 +3722,10 @@ function gasRowHTML(g,i){
   else if(pp && nd) gin+='<div class="note">'+(g.dias||[]).map(function(x){ return fmtDate(isoLocal(addDays(parseISO(x.wk),x.i))); }).join(', ')+'</div>';
   return '<tr data-grow="'+i+'"><td class="anro">'+(i+1)+'</td><td>'+gin+'</td><td>'+aIn('g',i,'t',g.t||'',{num:1,cls:'n'})+'</td><td>'+doc+'</td><td>'+aIn('g',i,'docnro',g.docnro)+'</td><td>'+aIn('g',i,'tipo',g.tipo,{list:'gvTiposGasto',ph:arqRO?'':'Tipo'})+'</td></tr>';
 }
+function cchRowHTML(g,i){
+  var doc='<select class="ain" data-f="cc" data-r="'+i+'" data-c="doc"'+(arqRO?' disabled':'')+'><option value="">—</option>'+['RECIBO','FACTURA','SIN RESPALDO'].map(function(x){return '<option'+(String(g.doc||'').toUpperCase()===x?' selected':'')+'>'+x+'</option>';}).join('')+'</select>';
+  return '<tr data-crow="'+i+'"><td class="anro">'+(i+1)+'</td><td>'+aIn('cc',i,'g',g.g,{ph:arqRO?'':'Descripción del gasto'})+'</td><td>'+aIn('cc',i,'t',g.t||'',{num:1,cls:'n'})+'</td><td>'+doc+'</td><td>'+aIn('cc',i,'docnro',g.docnro)+'</td></tr>';
+}
 function aField(label,inner){ return '<div class="afr"><label>'+label+'</label>'+inner+'</div>'; }
 var ARQ_CHEV='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-.15em"><path d="M6 9l6 6 6-6"/></svg>';
 function colBtn(id){ return '<button type="button" class="mini acolb" onclick="arqCol(\''+id+'\')" title="Minimizar / mostrar">'+ARQ_CHEV+'</button>'; }
@@ -3770,6 +3783,13 @@ function arqSheetHTML(d){
   if(ro && !gl.length) h+='<tr><td colspan="6" class="note" style="text-align:center;padding:14px">Sin gastos.</td></tr>';
   gl.forEach(function(g,i){ h+=gasRowHTML(g,i); });
   h+='</tbody></table></div><datalist id="gvTiposGasto">'+GV_TIPOS_GASTO.map(function(x){return '<option value="'+esc(x)+'">';}).join('')+'</datalist><datalist id="gvEmpList">'+(ro?'':empleadosSuc(d.suc).map(function(e){return '<option value="'+esc(empName(e))+'">';}).join(''))+'</datalist>'+(ro?'':'<div class="note" style="margin-top:8px">Si le pagaste a alguien del personal con el dinero de la caja, elige el tipo <b>PAGO AL PERSONAL</b>: el sistema te pide el nombre y te muestra sus días pendientes para que marques cuáles le pagas. Al guardar el arqueo esos días quedan pagados.</div>')+'</div>';
+  // --- caja chica (aparte: no entra en el arqueo)
+  h+='<div class="acard" id="cardCch"><h3>'+ARQ_IC.gas+' Gastos de caja chica'+(ro?'':'<span class="ahint">Solo lo que se pagó con el dinero de la caja chica. No afecta el arqueo.</span>')+'<span class="sp"></span><span class="atotchip">Inicio: <b id="aCchIni"></b></span><span class="atotchip">Gastos: <b id="aCchTot"></b></span><span class="atotchip">Saldo: <b id="aCchSal"></b></span>'+(ro?'':'<button class="mini" onclick="arqMasFilas(\'c\')">+ 5 filas</button>')+colBtn('cardCch')+'</h3>';
+  h+='<div class="aobox egr"><table class="aot"><thead><tr><th>#</th><th>Gasto</th><th>Monto</th><th>Factura o recibo</th><th>Nro de documento</th></tr></thead><tbody id="cchRows">';
+  var cl=ro?(d.cch||[]).filter(cchUsada):(d.cch||[]);
+  if(ro && !cl.length) h+='<tr><td colspan="5" class="note" style="text-align:center;padding:14px">Sin gastos de caja chica.</td></tr>';
+  cl.forEach(function(g,i){ h+=cchRowHTML(g,i); });
+  h+='</tbody></table></div><div id="aCchMsg" class="note" style="margin-top:8px"></div></div>';
   // --- 3 bloques
   h+='<div class="a3">';
   h+='<div class="acard" id="cardRep"><h3>Reporte de ventas<span class="sp"></span>'+colBtn('cardRep')+'</h3><div id="aRep"></div></div>';
@@ -3791,6 +3811,7 @@ function arqColApply(){ var m=arqColGet(); Object.keys(m).forEach(function(id){ 
 function arqMasFilas(t){
   if(!draft||arqRO) return;
   if(t==='o'){ var b=draft.ordenes.length, tb=document.getElementById('ordRows'), h=''; for(var i=0;i<10;i++){ draft.ordenes.push({m:'',a:{},n:''}); h+=ordRowHTML(draft.ordenes[b+i],b+i); } tb.insertAdjacentHTML('beforeend',h); var f=tb.querySelector('tr[data-row="'+b+'"] select, tr[data-row="'+b+'"] input'); if(f) f.focus(); }
+  else if(t==='c'){ var b3=draft.cch.length, tc=document.getElementById('cchRows'), h3=''; for(var k=0;k<5;k++){ draft.cch.push({g:'',t:'',doc:'',docnro:''}); h3+=cchRowHTML(draft.cch[b3+k],b3+k); } tc.insertAdjacentHTML('beforeend',h3); }
   else { var b2=draft.gastos.length, tg=document.getElementById('gasRows'), h2=''; for(var j=0;j<5;j++){ draft.gastos.push({g:'',t:'',doc:'',docnro:'',tipo:''}); h2+=gasRowHTML(draft.gastos[b2+j],b2+j); } tg.insertAdjacentHTML('beforeend',h2); }
   guardarBorrador(); toast(t==='o'?'10 filas más':'5 filas más');
 }
@@ -3824,6 +3845,7 @@ function arqDatHTML(c,d){
   h+=sec('Ventas por canal',(tiene('peya')?kvRow('PedidosYa',fmt(c.ventasPeya)):'')+kvRow('Local',fmt(c.ventasLocal))+(tiene('yango')?kvRow('YANGO',fmt(c.ventasYango)):''));
   h+=sec('Detalle por tipo de pago',(tiene('peya')?kvRow('PedidosYa (lo cobra PedidosYa)',fmt(c.t.peya_onl))+(c.t.peya_efe?kvRow('Efectivo PeYa',fmt(c.t.peya_efe)):'')+(c.t.peya_vou?kvRow('Vouchers PeYa',fmt(c.t.peya_vou)):'')+(c.t.peya_promo?kvRow('Dscto. promoción PeYa',fmt(c.t.peya_promo)):'')+(c.t.peya_otros?kvRow('Otros dsctos. PeYa',fmt(c.t.peya_otros)):''):'')+(tiene('yango')?kvRow('Online YANGO',fmt(c.t.yango)):'')+kvRow('Efectivo local',fmt(c.t.loc_efe))+kvRow('Tarjeta local',fmt(c.t.loc_pos))+kvRow('Transf./QR local',fmt(c.t.loc_qr)));
   h+=sec('Balance del día',kvRow('Total tarjeta',fmt(c.t.loc_pos))+kvRow('Total online (PeYa + YANGO)',fmt(r2(c.t.peya_onl+c.t.yango)))+kvRow('Total QR',fmt(c.t.loc_qr))+kvRow('Ventas en efectivo',fmt(c.efectivo))+kvRow('(−) Gastos',fmt(c.totalGastos))+kvRow('Efectivo esperado',fmt(c.saldo),'strong')+kvRow('Dinero en sobre',fmt(c.sobre),'strong')+kvRow('Inicio caja chica (aparte)',fmt(d.cajaChica||0)));
+  var cq=cchCalc(d); h+=sec('Caja chica (aparte)',kvRow('Inicio',fmt(cq.ini))+kvRow('(−) Gastos de caja chica',fmt(cq.tot))+kvRow('Saldo de caja chica',fmt(cq.saldo),'strong'));
   return h;
 }
 function arqRender(){
@@ -3845,6 +3867,10 @@ function arqRender(){
   GV_DENOMS.forEach(function(dn){ var e=document.getElementById('cs_'+dn[0]); if(e){ var q=num((d.conteo||{})[dn[0]]); e.textContent=q?fmt(q*dn[1]):''; } });
   document.getElementById('aCnt').innerHTML=kvRow('Total dinero en sobre',fmt(c.sobre),'strong')+'<div class="kv"><span>Resultado del arqueo</span>'+estBadge(c.estado,c.dif)+'</div>';
   document.getElementById('aEgrTot').textContent=bs(c.totalGastos);
+  var cc=cchCalc(d), fo=cchFondo(d.suc), cm=document.getElementById('aCchMsg');
+  document.getElementById('aCchIni').textContent=bs(cc.ini); document.getElementById('aCchTot').textContent=bs(cc.tot);
+  var cs=document.getElementById('aCchSal'); cs.textContent=bs(cc.saldo); cs.style.color=cc.saldo<0?'#c0392b':'';
+  if(cm) cm.innerHTML=cc.saldo<0?'<b style="color:#c0392b">Los gastos de caja chica superan lo que había al inicio.</b>':(cc.ini!==fo?'El fondo de caja chica de esta sucursal es <b>'+bs(fo)+'</b>; el inicio anotado es '+bs(cc.ini)+'.':(cc.tot?'Al final del día deben quedar <b>'+bs(cc.saldo)+'</b> en la caja chica. Si la repones con dinero de las ventas, anótalo arriba en Egresos con el tipo <b>REPOSICIÓN CAJA CHICA</b>.':''));
   // totales del bloque PedidosYa
   if(document.getElementById('pyS_tot')){ var S={n:0,onl:0};
     marcasPeya(d).forEach(function(k){ var x=(d.peya||{})[k]||{}, tv=num(x.onl)+num(x.efe), n=num(x.n); S.n+=n; S.onl+=tv; var e=document.getElementById('pyT_'+k); if(e) e.textContent=(tv&&n)?fmt(tv/n):''; });
@@ -3910,6 +3936,7 @@ function arqOnInput(e){
     if(c==='t' && gw.dias){ delete gw.dias; delete gw.dEmp; arqGasRow(r,1); toast('Cambiaste el monto a mano: el pago queda sin días (como adelanto)'); }
     if(c==='tipo' && eraPP!==(String(v).toUpperCase()===TIPO_PAGO_PERSONAL)){ if(!eraPP){ arqGasRow(r); guardarBorrador(); arqPagoModal(r); return; } delete gw.dias; delete gw.dEmp; arqGasRow(r,1); }
     if(c==='tipo'){ var pp=String(v).toUpperCase()===TIPO_PAGO_PERSONAL, gi=document.querySelector('#asheet [data-f="g"][data-r="'+r+'"][data-c="g"]'); if(gi){ if(pp){ gi.setAttribute('list','gvEmpList'); gi.placeholder='Elige a la persona'; } else { gi.removeAttribute('list'); gi.placeholder='Descripción del gasto'; } } } }
+  else if(f==='cc'){ draft.cch[r][c]=v; var cu2=0; draft.cch.forEach(function(g,i){ if(cchUsada(g)) cu2=i+1; }); if(cu2>=draft.cch.length-1){ var tb3=document.getElementById('cchRows'), b4=draft.cch.length; draft.cch.push({g:'',t:'',doc:'',docnro:''}); tb3.insertAdjacentHTML('beforeend',cchRowHTML(draft.cch[b4],b4)); } }
   else if(f==='cn'){ draft.conteo=draft.conteo||{}; if(num(v)) draft.conteo[c]=num(v); else delete draft.conteo[c]; }
   else if(f==='d'){
     draft[c]=v;
@@ -4182,6 +4209,8 @@ function ticketHTML(a){
   h+='<div class="cut"></div><h1>EGRESOS ARQUEO NRO '+esc(a.nro)+'</h1><table class="bx"><tr class="hd"><td>GASTO</td><td class="n">TOTAL</td></tr>'
     +(gs.length?gs.map(function(g){ return '<tr><td>'+esc(g.g)+(g.tipo?'<br><small>'+esc(g.tipo)+(g.doc?' · '+esc(g.doc)+' '+esc(g.docnro||''):'')+'</small>':'')+'</td><td class="n">'+fmt(g.t)+'</td></tr>'; }).join(''):'<tr><td colspan="2" class="c">SIN GASTOS</td></tr>')
     +'<tr class="b"><td>TOTAL GASTOS DE CAJA</td><td class="n">'+fmt(c.totalGastos)+'</td></tr></table>';
+  var cq=cchCalc(d), cl=(d.cch||[]).filter(cchUsada);
+  h+='<h2>CAJA CHICA (APARTE)</h2><table class="bx">'+r('INICIO CAJA CHICA',fmt(cq.ini))+cl.map(function(g){ return '<tr><td>'+esc(g.g)+(g.doc?'<br><small>'+esc(g.doc)+' '+esc(g.docnro||'')+'</small>':'')+'</td><td class="n">'+fmt(g.t)+'</td></tr>'; }).join('')+r('TOTAL GASTOS CAJA CHICA',fmt(cq.tot))+r('SALDO CAJA CHICA',fmt(cq.saldo),1)+'</table>';
   h+='<h2>COMENTARIOS DEL DÍA</h2><div class="com">'+(esc(a.comentarios||'')||'&nbsp;')+'</div>';
   h+='<table class="kv ft">'+r('FECHA DE IMPRESIÓN',fullDate(isoLocal(now))+' '+hora)+r('CAJERO',esc(a.cajero||'—'))+r('SUCURSAL',esc(gvSucName(a.suc).toUpperCase()))+'</table><div class="c sm">NUMMEROS by CONTAX</div>';
   var css='@page{size:80mm auto;margin:3mm}*{box-sizing:border-box}body{margin:0;width:74mm;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#000}'
@@ -4247,6 +4276,12 @@ function arqueoReportHTML(a){
     h+='<tr class="tot"><td>Total contado</td><td></td><td>'+fmt(tc)+'</td></tr>';
     if(a.conteo.cajaChica) h+='<tr><td>(−) Inicio caja chica</td><td></td><td>'+fmt(a.conteo.cajaChica)+'</td></tr>';
     h+='<tr class="tot"><td>Dinero en sobre</td><td></td><td>'+fmt(a.sobre)+'</td></tr></tbody></table>';
+  }
+  if((a.cajaChicaGastos||[]).length||(a.conteo&&a.conteo.cajaChica)){
+    var ccl=a.cajaChicaGastos||[], cct=ccl.reduce(function(s,g){return s+num(g.t);},0), cci=num((a.conteo||{}).cajaChica);
+    h+='<div class="cap">Caja chica (aparte del arqueo)</div><table><thead><tr><th>Gasto</th><th>Doc</th><th>Monto</th></tr></thead><tbody><tr><td>Inicio caja chica</td><td></td><td>'+fmt(cci)+'</td></tr>';
+    ccl.forEach(function(g){ h+='<tr><td>'+esc(g.g)+'</td><td>'+esc(((g.doc||'')+' '+(g.docnro||'')).trim())+'</td><td>'+fmt(g.t)+'</td></tr>'; });
+    h+='<tr class="tot"><td>Total gastos de caja chica</td><td></td><td>'+fmt(cct)+'</td></tr><tr class="tot"><td>Saldo de caja chica</td><td></td><td>'+fmt(cci-cct)+'</td></tr></tbody></table>';
   }
   if((a.gastos||[]).length){
     h+='<div class="cap">Egresos / Gastos</div><table><thead><tr><th>Gasto</th><th>Tipo</th><th>Doc</th><th>Monto</th></tr></thead><tbody>';
@@ -4386,6 +4421,11 @@ async function saveArqueo(btn){
     var falta=[]; if(!String(gg.g||'').trim()) falta.push('descripción'); if(!(num(gg.t)>0)) falta.push('monto'); if(!gg.doc) falta.push('factura o recibo'); if(!String(gg.docnro||'').trim()) falta.push('nro de documento'); if(!String(gg.tipo||'').trim()) falta.push('tipo de gasto');
     if(falta.length){ toast('Gasto #'+(gi+1)+': falta '+falta.join(', ')); var cg=document.getElementById('cardEgr'); if(cg){ cg.classList.remove('acol'); var gr=cg.querySelector('tr[data-grow="'+gi+'"]'); if(gr) gr.scrollIntoView({block:'center',behavior:'smooth'}); } return; }
   }
+  // caja chica: descripción y monto; el saldo no puede quedar negativo
+  for(var ci=0; ci<(draft.cch||[]).length; ci++){ var cg2=draft.cch[ci]; if(!cchUsada(cg2)) continue;
+    var fc=[]; if(!String(cg2.g||'').trim()) fc.push('descripción'); if(!(num(cg2.t)>0)) fc.push('monto'); if(!cg2.doc) fc.push('factura o recibo');
+    if(fc.length){ toast('Caja chica #'+(ci+1)+': falta '+fc.join(', ')); var ccd=document.getElementById('cardCch'); if(ccd){ ccd.classList.remove('acol'); ccd.scrollIntoView({block:'center',behavior:'smooth'}); } return; } }
+  if(cchCalc(draft).saldo<0){ toast('Los gastos de caja chica superan el inicio de caja chica. Revisa los montos.'); return; }
   var hayPeya=Object.keys(draft.peya||{}).some(function(k){ var x=draft.peya[k]; return num(x.onl)||num(x.efe); });
   if(!hayPeya && !draft.ordenes.some(function(o){ return Object.keys(o.a||{}).some(function(k){return num(o.a[k]);}); })){ toast('Agrega al menos una orden con importe (o los totales de PedidosYa)'); return; }
   // PedidosYa: si hay importe tiene que haber cantidad de órdenes, y al revés
@@ -4406,6 +4446,7 @@ async function saveArqueo(btn){
     tEfectivoPeya:c.t.tEfectivoPeya, tOnlinePeya:c.t.tOnlinePeya, tVouchers:c.t.tVouchers, tDsctoPromo:c.t.tDsctoPromo, tOtrosDsctos:c.t.tOtrosDsctos,
     tEfectivoLocal:c.t.tEfectivoLocal, tTarjetaLocal:c.t.tTarjetaLocal, tTransfQR:c.t.tTransfQR,
     totalGastos:c.totalGastos, saldo:q.saldo, sobre:q.sobre, difArqueo:q.dif, conteo:conteoObj,
+    cajaChicaGastos:(draft.cch||[]).filter(cchUsada).map(function(g){ return {g:String(g.g||'').trim(),t:num(g.t),doc:g.doc||'',docnro:String(g.docnro||'').trim()}; }), cajaChicaTotal:cchCalc(draft).tot, cajaChicaSaldo:cchCalc(draft).saldo,
     comentarios:draft.comentarios||'', mes:(MONTHS[parseInt(draft.fecha.slice(5,7),10)-1]||'').toLowerCase(),
     ordenes:draft.ordenes.filter(ordUsada).map(function(o){ var a={}; for(var k in (o.a||{})){ if(num(o.a[k])) a[k]=num(o.a[k]); } var r={m:o.m,a:a}; if(o.n) r.n=o.n; if(o.mix) r.mx=1; return r; }),
     peya:(function(){ var o={}; Object.keys(draft.peya||{}).forEach(function(k){ var x=draft.peya[k], y={}; ['n','onl','efe','vou','promo'].forEach(function(f){ if(num(x[f])) y[f]=num(x[f]); }); if(Object.keys(y).length) o[k]=y; }); return o; })(),
