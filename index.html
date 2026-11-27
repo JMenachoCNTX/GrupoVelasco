@@ -952,7 +952,7 @@ var BUILTIN_CLOUD = {
   space: 'principal',
   cfg: '{ "apiKey":"AIzaSyCQq_UHVhDXX2vTzMAY6ydgq7gaZcrjc2A", "authDomain":"contax-sistemas.firebaseapp.com", "projectId":"contax-sistemas", "storageBucket":"contax-sistemas.firebasestorage.app", "messagingSenderId":"110271075680", "appId":"1:110271075680:web:c12ce2fefb8ed97fa03a05", "measurementId":"G-JWF6ES2C4C" }'
 };
-var APP_VERSION = 'v66';
+var APP_VERSION = 'v67';
 
 /* ================= PERMISOS ================= */
 function isAdmin(){ return !!(session && session.level==='admin'); }
@@ -1660,10 +1660,12 @@ function payDay(id,i,btn){
   var f=fEl.value, m=num(mEl.value);
   if(!f){ toast('Coloca la fecha de pago'); return; }
   if(m<=0){ toast('Coloca el importe'); return; }
+  var e=getEntry(weekKey(curMonday),id,true), c0=e.d[i]||{}, rr0=entryRates(e,empBranch(id)), falta=r2(dayGan(c0,rr0.r,rr0.re)-num(c0.pm));
+  if(falta<=0.009){ rerenderCardBody(id); refreshCard(id); toast('Ese día ya figura pagado'+(c0.pmPor?' (por '+c0.pmPor+')':'')+'. No se registró otro pago.'); return; }
+  if(m>falta+0.009){ m=falta; toast('Solo faltaban '+bs(falta)+': se registró ese importe'); }
   btnBusy(btn,'Pagando…');
   withLoader('Guardando pago…', function(){
-    var e=getEntry(weekKey(curMonday),id,true);
-    e.d[i].pm = num(e.d[i].pm) + m;   // acumula (permite pagar la diferencia)
+    e.d[i]=e.d[i]||{h:0,e:0,x:0}; e.d[i].pm = r2(num(e.d[i].pm) + m);   // acumula (permite pagar la diferencia)
     e.d[i].pf = f; e.d[i].pmPor=operadorNombre();
     saveLocal(); rerenderCardBody(id); refreshCard(id); refreshStrip();
   }, 1800).then(function(){ toast('Pago registrado'); });
@@ -2826,7 +2828,7 @@ function registrarPagosCaja(doc){
     var e=empPorNombre(doc.suc,g.g); if(!e) return;
     var resto=num(g.t);
     // días elegidos: quedan pagados con el dinero de la caja
-    (g.dias||[]).forEach(function(x){ var m=Math.min(num(x.m),resto); if(m<=0) return;
+    (g.dias||[]).forEach(function(x){ var m=Math.min(num(x.m),resto,Math.max(0,diaFaltaCaja(x.wk,e._id,x.i,doc.id))); if(m<=0) return;
       var en=getEntry(x.wk,e._id,true), c=en.d[x.i]=en.d[x.i]||{h:0,e:0,x:0};
       c.pm=r2(num(c.pm)+m); c.pf=doc.fecha; c.pmPor=doc.hechoPor||''; c.origen='caja'; c.arq=doc.id;
       c.cj=c.cj||{}; c.cj[doc.id]=r2(num(c.cj[doc.id])+m); resto=r2(resto-m); n++; });
@@ -2836,6 +2838,8 @@ function registrarPagosCaja(doc){
   });
   if(n){ saveLocal(); toast('Pagos al personal registrados ('+n+')'); }
 }
+function diaFaltaCaja(wk,empId,i,arqId){ var en=(DB.weeks[wk]||{})[empId]; if(!en) return 0; var c=(en.d||[])[i]||{}, rr=entryRates(en,(DB.employees[empId]||{}).branch), propio=num((c.cj||{})[arqId]);
+  return r2(dayGan(c,rr.r,rr.re)-(num(c.pm)-propio)); }
 function pmCaja(c){ var t=0; if(c&&c.cj) Object.keys(c.cj).forEach(function(k){ t+=num(c.cj[k]); }); return t; }
 function origenPagoHTML(p){ return p&&p.origen==='caja' ? '<span class="tag" style="background:#e2f1ea;color:#1d6b40">DE CAJA'+(p.arq?' · ARQUEO '+esc(String(p.arq).split('_').pop()):'')+'</span>' : '<span class="tag">DINERO EN EFECTIVO DEL PAGO SEMANAL</span>'; }
 /* ---- Cargos del personal (iguales en todas las sucursales) ---- */
@@ -4415,6 +4419,11 @@ async function saveArqueo(btn){
   for(var pi=0; pi<draft.gastos.length; pi++){ var pg=draft.gastos[pi]; if(String(pg.tipo||'').toUpperCase()!==TIPO_PAGO_PERSONAL || !num(pg.t)) continue;
     if(!empPorNombre(draft.suc,pg.g)){ toast('Gasto #'+(pi+1)+': "'+(pg.g||'')+'" no está en el Personal de esta sucursal. Elige el nombre de la lista.'); return; }
     if(pg.dias && Math.abs(pg.dias.reduce(function(a,x){ return a+num(x.m); },0)-num(pg.t))>0.01){ toast('Gasto #'+(pi+1)+': el total no coincide con los días elegidos. Vuelve a «Elegir días».'); return; } }
+  // los días elegidos tienen que seguir pendientes (pudieron pagarse en «Semana» mientras se llenaba el arqueo)
+  var elegidos={}; draft.gastos.forEach(function(pg,pi){ if(String(pg.tipo||'').toUpperCase()!==TIPO_PAGO_PERSONAL) return; var em=empPorNombre(draft.suc,pg.g); if(!em) return;
+    (pg.dias||[]).forEach(function(x){ var k=em._id+'|'+x.wk+'|'+x.i; (elegidos[k]=elegidos[k]||{emp:em,wk:x.wk,i:x.i,m:0,fila:pi+1}).m+=num(x.m); }); });
+  for(var ek in elegidos){ var el=elegidos[ek], fl=diaFaltaCaja(el.wk,el.emp._id,el.i,draft.suc+'_'+draft.nro);
+    if(el.m>fl+0.01){ toast('Gasto #'+el.fila+': el '+fmtDate(isoLocal(addDays(parseISO(el.wk),el.i)))+' de '+empName(el.emp)+(fl<=0.009?' ya figura pagado':' solo tiene '+bs(fl)+' pendiente')+'. Vuelve a «Elegir días».'); return; } }
   // gastos: todas las columnas obligatorias
   for(var gi=0; gi<draft.gastos.length; gi++){ var gg=draft.gastos[gi];
     if(!(String(gg.g||'').trim()||num(gg.t)||gg.doc||String(gg.docnro||'').trim()||String(gg.tipo||'').trim())) continue;
